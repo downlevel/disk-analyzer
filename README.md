@@ -22,6 +22,12 @@ interface (styled with Tailwind CSS) displays the results.
 Prebuilt installers are published on the
 [GitHub Releases](../../releases) page of this repository.
 
+> **Windows SmartScreen warning:** the installer is not code-signed, so Windows may show
+> "Windows protected your PC" when you run it. This is expected for unsigned open-source software.
+> Click **More info → Run anyway** to continue. You can verify the download against the SHA-256
+> checksum listed in the release notes (`Get-FileHash .\<file>.exe` in PowerShell). If you prefer,
+> build it yourself from source (see below).
+
 ## Tech stack
 
 - **Core:** Rust, Tauri 2, [`ts-rs`](https://github.com/Aleph-Alpha/ts-rs) (generates the shared TypeScript types)
