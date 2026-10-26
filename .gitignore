@@ -1,0 +1,40 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Build
+src-tauri/target/
+releases/
+*.exe
+
+# Segreti / ambiente
+.env
+.env.*
+
+# Editor directories and files
+.vscode/
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Documentazione di sviluppo e materiale di design (non pubblicati)
+design/
+PRD.md
+ARCHITECTURE.md
+DESIGN.md
+DESIGN_PROMPT.md
+TASKS.md

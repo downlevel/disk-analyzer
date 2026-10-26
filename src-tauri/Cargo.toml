@@ -1,0 +1,54 @@
+[package]
+name = "disk-analyzer"
+version = "0.1.0"
+description = "Analizzatore dello spazio su disco per Windows"
+authors = ["Mauro Giulivi"]
+edition = "2024"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+# The `_lib` suffix may seem redundant but it is necessary
+# to make the lib name unique and wouldn't conflict with the bin name.
+# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
+name = "disk_analyzer_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+ts-rs = "12.0.1"
+tracing = "0.1.44"
+tracing-appender = "0.2.5"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+rayon = "1.12.0"
+tauri-plugin-dialog = "2.8.3"
+winreg = "0.56.0"
+
+
+# Build di sviluppo: niente informazioni di debug per le dipendenze (il nostro codice le mantiene).
+# Dimezza RAM, tempo e spazio su disco della compilazione; il crate `windows` con il debug
+# completo mandava rustc fuori memoria su questo PC.
+[profile.dev.package."*"]
+debug = false
+
+# Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration
+[profile.release]
+# LTO "thin" e più unità di codegen: il link con LTO completo supera la RAM disponibile su
+# questo PC (come già successo a rustc con tokio). Il binario risulta di poco più grande.
+codegen-units = 8
+lto = "thin"
+opt-level = 3
+panic = "abort"
+strip = true
+
+[dev-dependencies]
+tempfile = "3.27.0"
+
+[target."cfg(windows)".dependencies]
+windows = { version = "0.62", features = ["Win32_Foundation", "Win32_Storage_FileSystem"] }
