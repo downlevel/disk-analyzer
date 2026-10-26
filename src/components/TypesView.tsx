@@ -14,10 +14,10 @@ export function TypesView() {
   const stats = useStore((s) => s.typeStats);
 
   if (!stats) {
-    return <div className="grid flex-1 place-items-center text-muted-fg">Caricamento…</div>;
+    return <div className="grid flex-1 place-items-center text-muted-fg">Loading…</div>;
   }
 
-  // Statistiche calcolate dal core su tutti i file della scansione.
+  // Statistics computed by the core over all files in the scan.
   const perType = (pick: (t: TypeStat) => number) =>
     Object.fromEntries(stats.types.map((t) => [t.fileType, pick(t)])) as Partial<
       Record<FileType, number>
@@ -44,19 +44,19 @@ export function TypesView() {
   const maxExt = topExts.length ? topExts[0].size : 1;
 
   return (
-    // Area scorrevole: va resa raggiungibile con la tastiera (tabIndex) e nominata per i lettori di schermo.
+    // Scrollable area: it must be keyboard-reachable (tabIndex) and named for screen readers.
     <div
       tabIndex={0}
       role="region"
-      aria-label="Ripartizione dello spazio per tipo e per estensione"
+      aria-label="Space breakdown by type and by extension"
       className="min-h-0 flex-1 overflow-auto px-6 pt-5 pb-7"
     >
       <div className="flex max-w-[1080px] flex-col gap-7">
         <section className="flex flex-col gap-3.5">
           <div className="flex items-baseline gap-2.5">
-            <h2 className="m-0 text-[15px] font-semibold">Ripartizione per tipo</h2>
+            <h2 className="m-0 text-[15px] font-semibold">Breakdown by type</h2>
             <span className="text-muted-fg tabular-nums">
-              {`${fmtSize(root.size)} in ${fmtInt(root.files)} file`}
+              {`${fmtSize(root.size)} in ${fmtInt(root.files)} ${root.files === 1 ? "file" : "files"}`}
             </span>
           </div>
           <div className="flex h-3.5 gap-0.5 overflow-hidden rounded">
@@ -75,23 +75,23 @@ export function TypesView() {
           </div>
           <div
             role="table"
-            aria-label="Spazio per tipo di file"
+            aria-label="Space by file type"
             className="flex flex-col overflow-hidden rounded-lg border border-border"
           >
             <div
               role="row"
               className={`${TYPE_GRID} h-[34px] bg-muted text-xs font-medium text-muted-fg`}
             >
-              <div role="columnheader">Tipo</div>
-              <div role="columnheader">Quota</div>
+              <div role="columnheader">Type</div>
+              <div role="columnheader">Share</div>
               <div role="columnheader" className="text-right">
-                Dimensione
+                Size
               </div>
               <div role="columnheader" className="text-right">
                 %
               </div>
               <div role="columnheader" className="text-right">
-                N. file
+                Files
               </div>
             </div>
             {sorted.map((t) => {
@@ -141,29 +141,29 @@ export function TypesView() {
         </section>
 
         <section className="flex flex-col gap-3.5">
-          <h2 className="m-0 text-[15px] font-semibold">Estensioni principali</h2>
+          <h2 className="m-0 text-[15px] font-semibold">Top extensions</h2>
           <div
             role="table"
-            aria-label="Estensioni principali"
+            aria-label="Top extensions"
             className="flex flex-col overflow-hidden rounded-lg border border-border"
           >
             <div
               role="row"
               className={`${EXT_GRID} h-[34px] bg-muted text-xs font-medium text-muted-fg`}
             >
-              <div role="columnheader">Estensione</div>
-              <div role="columnheader">Tipo</div>
+              <div role="columnheader">Extension</div>
+              <div role="columnheader">Type</div>
               <div role="columnheader">
-                <span className="sr-only">Proporzione</span>
+                <span className="sr-only">Proportion</span>
               </div>
               <div role="columnheader" className="text-right">
-                Dimensione
+                Size
               </div>
               <div role="columnheader" className="text-right">
-                N. file
+                Files
               </div>
               <div role="columnheader" className="text-right">
-                Media
+                Average
               </div>
             </div>
             {topExts.map((e) => {

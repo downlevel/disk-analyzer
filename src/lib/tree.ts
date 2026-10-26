@@ -1,6 +1,6 @@
 import type { FileType, SortKey, TreeNode } from "./types";
 
-/** Tipo prevalente (per dimensione) di una cartella. */
+/** Predominant type (by size) of a folder. */
 export function dominantType(n: TreeNode): FileType {
   let best: FileType = "other";
   let max = -1;
@@ -20,12 +20,12 @@ export function nodeType(n: TreeNode): FileType {
 export function sortChildren(n: TreeNode, key: SortKey, dir: 1 | -1): TreeNode[] {
   return n.children.slice().sort((a, b) => {
     if (!!a.agg !== !!b.agg) return a.agg ? 1 : -1;
-    if (key === "name") return dir * a.name.localeCompare(b.name, "it");
-    return dir * (a[key] - b[key]) || a.name.localeCompare(b.name, "it");
+    if (key === "name") return dir * a.name.localeCompare(b.name, "en");
+    return dir * (a[key] - b[key]) || a.name.localeCompare(b.name, "en");
   });
 }
 
-/** Cartella che contiene un nodo, ricavata dal percorso. */
+/** Folder containing a node, derived from its path. */
 export function dirnameOf(path: string): string {
   const i = path.lastIndexOf("\\");
   if (i < 0) return path;

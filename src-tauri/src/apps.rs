@@ -1,9 +1,9 @@
-//! App desktop installate: elenco dal registro di Windows e misura delle loro cartelle.
+//! Installed desktop apps: list from the Windows registry and measurement of their folders.
 //!
-//! Le app si leggono dalle chiavi `Uninstall` del registro (le stesse di "App installate" di
-//! Windows). Sono incluse solo le app desktop classiche; quelle di Microsoft Store non lo sono.
-//! La dimensione dichiarata nel registro (`EstimatedSize`) è spesso assente o approssimativa:
-//! dove la cartella di installazione è nota la si misura davvero con lo scanner.
+//! Apps are read from the registry `Uninstall` keys (the same ones behind Windows' "Installed
+//! apps"). Only classic desktop apps are included; Microsoft Store apps are not.
+//! The size declared in the registry (`EstimatedSize`) is often missing or approximate:
+//! where the install folder is known it is actually measured with the scanner.
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -21,7 +21,7 @@ use crate::sys;
 const UNINSTALL: &str = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall";
 const UNINSTALL_32: &str = r"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall";
 
-/// Valori di una voce `Uninstall`. Un trait, così la logica di filtro si prova senza registro.
+/// Values of an `Uninstall` entry. A trait, so the filtering logic can be tested without the registry.
 pub trait ValueSource {
     fn string(&self, name: &str) -> Option<String>;
     fn dword(&self, name: &str) -> Option<u32>;
@@ -36,15 +36,15 @@ impl ValueSource for RegKey {
     }
 }
 
-/// Cartelle in cui non ha senso (o è pericoloso) misurare "la cartella di un'app": radici di
-/// sistema e dell'utente, che contengono molto più della singola app.
+/// Folders where it makes no sense (or is dangerous) to measure "an app's folder": system and
+/// user roots, which contain far more than the single app.
 #[derive(Debug, Clone, Default)]
 pub struct Roots {
-    /// Cartelle escluse come tali (non i loro contenuti): es. `C:\Program Files`.
+    /// Folders excluded as such (not their contents): e.g. `C:\Program Files`.
     pub exact: Vec<PathBuf>,
-    /// Cartelle escluse insieme a tutto ciò che contengono: es. `C:\Windows`.
+    /// Folders excluded together with everything they contain: e.g. `C:\Windows`.
     pub tree: Vec<PathBuf>,
-    /// Radici sotto cui si accetta una cartella ricavata dall'icona o dal disinstallatore.
+    /// Roots under which a folder derived from the icon or the uninstaller is accepted.
     pub install_roots: Vec<PathBuf>,
 }
 
@@ -110,7 +110,7 @@ fn starts_within(path: &str, base: &Path) -> bool {
     path.len() > base.len() && path.starts_with(&base) && path[base.len()..].starts_with('\\')
 }
 
-/// Cartella di installazione utilizzabile: non vuota, non una radice di sistema o dell'utente.
+/// Usable install folder: non-empty, not a system or user root.
 fn usable_location(path: &str, roots: &Roots) -> Option<String> {
     let cleaned = path.trim().trim_matches('"').trim();
     let cleaned = if cleaned.len() > 3 {
@@ -121,7 +121,7 @@ fn usable_location(path: &str, roots: &Roots) -> Option<String> {
     if cleaned.is_empty() || is_drive_root(cleaned) {
         return None;
     }
-    // Deve essere un percorso assoluto con lettera di unità.
+    // Must be an absolute path with a drive letter.
     let b = cleaned.as_bytes();
     if b.len() < 3 || !b[0].is_ascii_alphabetic() || b[1] != b':' {
         return None;
@@ -140,13 +140,13 @@ fn usable_location(path: &str, roots: &Roots) -> Option<String> {
     Some(cleaned.to_string())
 }
 
-/// Primo file eseguibile indicato in un valore come `"C:\x\app.exe",0` o `"C:\x\unins.exe" /S`.
+/// First executable file named in a value such as `"C:\x\app.exe",0` o `"C:\x\unins.exe" /S`.
 fn exe_path(value: &str) -> Option<String> {
     let v = value.trim();
     let path = if let Some(rest) = v.strip_prefix('"') {
         rest.split('"').next()?.to_string()
     } else {
-        // Senza virgolette: fino alla fine dell'estensione .exe/.ico/.dll, senza argomenti.
+        // Without quotes: up to the end of the .exe/.ico/.dll extension, without arguments.
         let lower = v.to_lowercase();
         let end = [".exe", ".ico", ".dll"]
             .iter()
@@ -154,7 +154,7 @@ fn exe_path(value: &str) -> Option<String> {
             .min()?;
         v[..end].to_string()
     };
-    // Toglie l'indice dell'icona (",0").
+    // Strips the icon index (",0").
     let path = path
         .rsplit_once(',')
         .filter(|(_, n)| n.trim().parse::<i32>().is_ok())
@@ -162,8 +162,8 @@ fn exe_path(value: &str) -> Option<String> {
     (!path.is_empty()).then_some(path)
 }
 
-/// Cartella dell'app ricavata dall'icona o dal disinstallatore, solo se sta sotto una radice di
-/// installazione nota (es. `Program Files`) e non coincide con la radice stessa.
+/// App folder derived from the icon or the uninstaller, only if it lies under a known install
+/// root (e.g. `Program Files`) and is not the root itself.
 pub fn derive_location(
     display_icon: Option<&str>,
     uninstall: Option<&str>,
@@ -184,7 +184,7 @@ pub fn derive_location(
         })
 }
 
-/// "20251010" → "10 ott 2025".
+/// "20251010" → "10 Oct 2025".
 pub fn format_install_date(raw: &str) -> Option<String> {
     let s = raw.trim();
     if s.len() != 8 || !s.bytes().all(|b| b.is_ascii_digit()) {
@@ -212,7 +212,7 @@ const UPDATE_TYPES: [&str; 6] = [
     "update rollup",
 ];
 
-/// Converte una voce del registro in app, scartando componenti di sistema e aggiornamenti.
+/// Converts a registry entry into an app, discarding system components and updates.
 pub fn parse_app(
     scope: AppScope,
     key: &str,
@@ -265,8 +265,8 @@ pub fn parse_app(
     })
 }
 
-/// Toglie i duplicati (la stessa app registrata in più viste), segna le cartelle condivise e
-/// ordina per nome.
+/// Removes duplicates (the same app registered in several views), marks shared folders and
+/// sorts by name.
 pub fn finish(apps: Vec<InstalledApp>) -> Vec<InstalledApp> {
     let mut unique: Vec<InstalledApp> = Vec::new();
     let mut seen: HashMap<(String, String), usize> = HashMap::new();
@@ -277,7 +277,7 @@ pub fn finish(apps: Vec<InstalledApp>) -> Vec<InstalledApp> {
         );
         match seen.get(&key) {
             Some(&i) => {
-                // Tiene la voce più ricca di informazioni.
+                // Keeps the entry with the most information.
                 let score = |a: &InstalledApp| {
                     u8::from(a.install_location.is_some()) + u8::from(a.estimated_size.is_some())
                 };
@@ -308,7 +308,7 @@ pub fn finish(apps: Vec<InstalledApp>) -> Vec<InstalledApp> {
     unique
 }
 
-/// Elenco delle app desktop installate, lette dal registro.
+/// List of installed desktop apps, read from the registry.
 pub fn list() -> Vec<InstalledApp> {
     let roots = Roots::from_env();
     let sources = [
@@ -319,26 +319,26 @@ pub fn list() -> Vec<InstalledApp> {
     let mut apps = Vec::new();
     for (scope, hive, path) in sources {
         let Ok(root) = RegKey::predef(hive).open_subkey_with_flags(path, KEY_READ) else {
-            debug!(path, "chiave Uninstall non leggibile");
+            debug!(path, "Uninstall key not readable");
             continue;
         };
         for key in root.enum_keys().flatten() {
             match root.open_subkey_with_flags(&key, KEY_READ) {
                 Ok(sub) => apps.extend(parse_app(scope, &key, &sub, &roots)),
-                Err(e) => debug!(key, error = %e, "voce non leggibile"),
+                Err(e) => debug!(key, error = %e, "entry not readable"),
             }
         }
     }
     finish(apps)
 }
 
-/// Misura la cartella di un'app (dimensione logica, su disco e numero di file).
-/// `None` se la misura è stata annullata.
+/// Measures an app's folder (logical size, size on disk and file count).
+/// `None` if the measurement was cancelled.
 pub fn measure(id: &str, path: &str, cancel: &AtomicBool) -> Option<AppSize> {
     let root = Path::new(path);
     let opts = ScanOptions {
         cluster_size: sys::cluster_size(root),
-        // Qui servono solo i totali: niente file conservati singolarmente, albero minimo.
+        // Only the totals are needed here: no individually kept files, minimal tree.
         keep_files_per_dir: 0,
         ..ScanOptions::default()
     };
@@ -353,7 +353,7 @@ pub fn measure(id: &str, path: &str, cancel: &AtomicBool) -> Option<AppSize> {
 
     match scanner::scan(root, &opts, cancel, |_| {}) {
         Ok(Outcome::Completed { tree, .. }) => {
-            let r = tree.get(tree.root_id()).expect("la radice esiste sempre");
+            let r = tree.get(tree.root_id()).expect("the root always exists");
             Some(result(SizeStatus::Measured, r.size, r.disk, r.files))
         }
         Ok(Outcome::Cancelled(_)) => None,
@@ -362,7 +362,7 @@ pub fn measure(id: &str, path: &str, cancel: &AtomicBool) -> Option<AppSize> {
         }
         Err(ScanError::Denied) => Some(result(SizeStatus::Denied, 0, 0, 0)),
         Err(ScanError::Io(e)) => {
-            warn!(id, path, error = %e, "misura della cartella non riuscita");
+            warn!(id, path, error = %e, "folder measurement failed");
             Some(result(SizeStatus::Failed, 0, 0, 0))
         }
     }
@@ -404,16 +404,16 @@ mod tests {
                 r"C:\Program Files".into(),
                 r"C:\Program Files (x86)".into(),
                 r"C:\ProgramData".into(),
-                r"C:\Users\utente".into(),
-                r"C:\Users\utente\AppData\Local".into(),
+                r"C:\Users\user".into(),
+                r"C:\Users\user\AppData\Local".into(),
                 r"C:\".into(),
             ],
             tree: vec![r"C:\Windows".into()],
             install_roots: vec![
                 r"C:\Program Files".into(),
                 r"C:\Program Files (x86)".into(),
-                r"C:\Users\utente\AppData\Local\Programs".into(),
-                r"C:\Users\utente\AppData\Local".into(),
+                r"C:\Users\user\AppData\Local\Programs".into(),
+                r"C:\Users\user\AppData\Local".into(),
             ],
         }
     }
@@ -423,7 +423,7 @@ mod tests {
     }
 
     #[test]
-    fn legge_i_campi_di_un_app() {
+    fn reads_the_fields_of_an_app() {
         let app = parse(
             &Fake::default()
                 .s("DisplayName", "  7-Zip 25.01 (x64) ")
@@ -444,11 +444,11 @@ mod tests {
         );
         assert!(!app.location_derived);
         assert_eq!(app.estimated_size, Some(5758 * 1024));
-        assert_eq!(app.install_date.as_deref(), Some("10 ott 2025"));
+        assert_eq!(app.install_date.as_deref(), Some("10 Oct 2025"));
     }
 
     #[test]
-    fn scarta_componenti_di_sistema_aggiornamenti_e_voci_senza_nome() {
+    fn discards_system_components_updates_and_unnamed_entries() {
         assert!(parse(&Fake::default()).is_none());
         assert!(parse(&Fake::default().s("DisplayName", "   ")).is_none());
         assert!(
@@ -475,7 +475,7 @@ mod tests {
             )
             .is_none()
         );
-        // Un valore di ReleaseType diverso da un aggiornamento non esclude l'app.
+        // A ReleaseType value other than an update does not exclude the app.
         assert!(
             parse(
                 &Fake::default()
@@ -495,7 +495,7 @@ mod tests {
     }
 
     #[test]
-    fn la_dimensione_stimata_assente_o_zero_e_ignorata() {
+    fn missing_or_zero_estimated_size_is_ignored() {
         assert_eq!(
             parse(&Fake::default().s("DisplayName", "X"))
                 .unwrap()
@@ -511,7 +511,7 @@ mod tests {
     }
 
     #[test]
-    fn rifiuta_cartelle_troppo_ampie() {
+    fn rejects_overly_broad_folders() {
         for loc in [
             r"C:\",
             r"C:",
@@ -519,8 +519,8 @@ mod tests {
             r"C:\Program Files\",
             r"C:\Windows",
             r"C:\Windows\Installer\{ABC}",
-            r"C:\Users\utente",
-            r"C:\Users\utente\AppData\Local",
+            r"C:\Users\user",
+            r"C:\Users\user\AppData\Local",
             "",
             "Program Files\\X",
         ] {
@@ -532,7 +532,7 @@ mod tests {
             .unwrap();
             assert_eq!(
                 app.install_location, None,
-                "{loc:?} doveva essere rifiutata"
+                "{loc:?} should have been rejected"
             );
         }
         let ok = parse(
@@ -545,7 +545,7 @@ mod tests {
     }
 
     #[test]
-    fn ricava_la_cartella_dall_icona_o_dal_disinstallatore() {
+    fn derives_the_folder_from_the_icon_or_the_uninstaller() {
         let r = roots();
         assert_eq!(
             derive_location(
@@ -563,13 +563,13 @@ mod tests {
         assert_eq!(
             derive_location(
                 None,
-                Some(r#""C:\Users\utente\AppData\Local\Programs\Tool\unins000.exe" /SILENT"#),
+                Some(r#""C:\Users\user\AppData\Local\Programs\Tool\unins000.exe" /SILENT"#),
                 &r
             )
             .as_deref(),
-            Some(r"C:\Users\utente\AppData\Local\Programs\Tool")
+            Some(r"C:\Users\user\AppData\Local\Programs\Tool")
         );
-        // L'icona non utilizzabile lascia spazio al disinstallatore.
+        // An unusable icon leaves room for the uninstaller.
         assert_eq!(
             derive_location(
                 Some(r"C:\Windows\Installer\{X}\icon.ico"),
@@ -582,7 +582,7 @@ mod tests {
     }
 
     #[test]
-    fn non_ricava_cartelle_inaffidabili() {
+    fn does_not_derive_unreliable_folders() {
         let r = roots();
         assert_eq!(
             derive_location(Some(r"C:\Windows\Installer\{X}\icon.ico"), None, &r),
@@ -595,13 +595,13 @@ mod tests {
         assert_eq!(
             derive_location(Some(r"C:\Program Files\app.exe"), None, &r),
             None
-        ); // la radice stessa
-        assert_eq!(derive_location(Some(r"D:\Giochi\g.exe"), None, &r), None); // fuori dalle radici note
+        ); // the root itself
+        assert_eq!(derive_location(Some(r"D:\Games\g.exe"), None, &r), None); // outside the known roots
         assert_eq!(derive_location(None, None, &r), None);
     }
 
     #[test]
-    fn la_cartella_derivata_e_segnalata() {
+    fn the_derived_folder_is_flagged() {
         let app = parse(
             &Fake::default()
                 .s("DisplayName", "Notepad++")
@@ -616,14 +616,14 @@ mod tests {
     }
 
     #[test]
-    fn formatta_la_data_di_installazione() {
+    fn formats_the_install_date() {
         assert_eq!(
             format_install_date("20251010").as_deref(),
-            Some("10 ott 2025")
+            Some("10 Oct 2025")
         );
         assert_eq!(
             format_install_date("20240229").as_deref(),
-            Some("29 feb 2024")
+            Some("29 Feb 2024")
         );
         for bad in [
             "",
@@ -660,7 +660,7 @@ mod tests {
     }
 
     #[test]
-    fn elimina_i_duplicati_tenendo_la_voce_piu_ricca() {
+    fn removes_duplicates_keeping_the_richest_entry() {
         let out = finish(vec![
             app("machine:a", "Tool", "1.0", None, None),
             app(
@@ -681,15 +681,15 @@ mod tests {
     }
 
     #[test]
-    fn segna_le_cartelle_condivise_e_ordina_per_nome() {
+    fn marks_shared_folders_and_sorts_by_name() {
         let out = finish(vec![
             app("a", "Word", "1", Some(r"C:\Program Files\Office"), None),
             app("b", "Excel", "1", Some(r"c:\program files\office\"), None),
-            app("c", "Alfa", "1", Some(r"C:\Program Files\Alfa"), None),
+            app("c", "Alpha", "1", Some(r"C:\Program Files\Alfa"), None),
             app("d", "Beta", "1", None, None),
         ]);
         let names: Vec<_> = out.iter().map(|a| a.name.as_str()).collect();
-        assert_eq!(names, ["Alfa", "Beta", "Excel", "Word"]);
+        assert_eq!(names, ["Alpha", "Beta", "Excel", "Word"]);
         let shared: Vec<_> = out
             .iter()
             .filter(|a| a.shared_location)
@@ -699,18 +699,18 @@ mod tests {
     }
 
     #[test]
-    fn l_elenco_reale_del_registro_e_coerente() {
+    fn the_real_registry_list_is_consistent() {
         let apps = list();
         assert!(
             !apps.is_empty(),
-            "su un PC Windows c'è almeno un'app installata"
+            "a Windows PC has at least one installed app"
         );
         let mut ids: Vec<_> = apps.iter().map(|a| a.id.as_str()).collect();
         ids.sort_unstable();
         ids.dedup();
-        assert_eq!(ids.len(), apps.len(), "gli id devono essere unici");
+        assert_eq!(ids.len(), apps.len(), "ids must be unique");
         assert!(apps.iter().all(|a| !a.name.trim().is_empty()));
-        // Nessuna cartella di installazione può essere una radice di sistema.
+        // No install folder may be a system root.
         let r = Roots::from_env();
         for a in &apps {
             if let Some(loc) = &a.install_location {
@@ -720,7 +720,7 @@ mod tests {
     }
 
     #[test]
-    fn misura_una_cartella() {
+    fn measures_a_folder() {
         let dir = tempfile::tempdir().unwrap();
         std::fs::create_dir_all(dir.path().join("sub")).unwrap();
         std::fs::write(dir.path().join("a.bin"), [0u8; 100]).unwrap();
@@ -732,9 +732,9 @@ mod tests {
     }
 
     #[test]
-    fn misura_di_una_cartella_inesistente_o_annullata() {
+    fn measuring_a_missing_or_cancelled_folder() {
         let dir = tempfile::tempdir().unwrap();
-        let missing = dir.path().join("non-esiste");
+        let missing = dir.path().join("does-not-exist");
         let size = measure("x", &missing.to_string_lossy(), &AtomicBool::new(false)).unwrap();
         assert_eq!(size.status, SizeStatus::Missing);
         assert_eq!(size.size, 0);

@@ -57,37 +57,37 @@ function SizeCell({
   switch (info.kind) {
     case "measured":
       return (
-        <span title={`${fmtInt(info.files)} file`} className="font-medium">
+        <span title={`${fmtInt(info.files)} ${info.files === 1 ? "file" : "files"}`} className="font-medium">
           {fmtSize(info.size)}
         </span>
       );
     case "estimated":
-      // Senza cartella nota non si può misurare: si mostra quanto dichiarato dall'app.
+      // Without a known folder there is nothing to measure: show the size the app declares.
       return measuring && app.installLocation ? (
-        <span className="text-muted-fg">Misura…</span>
+        <span className="text-muted-fg">Measuring…</span>
       ) : (
         <span
-          title="Dimensione dichiarata dall'app nel registro di Windows, non misurata"
+          title="Size declared by the app in the Windows registry, not measured"
           className="text-muted-fg"
         >
           {`~${fmtSize(info.size)}`}
         </span>
       );
     case "missing":
-      return <span className="text-warn">Cartella non trovata</span>;
+      return <span className="text-warn">Folder not found</span>;
     case "denied":
-      return <span className="text-warn">Accesso negato</span>;
+      return <span className="text-warn">Access denied</span>;
     case "failed":
-      return <span className="text-warn">Errore</span>;
+      return <span className="text-warn">Error</span>;
     case "none":
       return measuring && app.installLocation ? (
-        <span className="text-muted-fg">Misura…</span>
+        <span className="text-muted-fg">Measuring…</span>
       ) : (
         <span
           title={
             app.installLocation
-              ? "Dimensione non disponibile"
-              : "L'app non indica dove è installata"
+              ? "Size not available"
+              : "The app does not say where it is installed"
           }
           className="text-muted-fg"
         >
@@ -145,10 +145,10 @@ function Row({
           <span className="truncate font-medium">{app.name}</span>
           {app.sharedLocation && (
             <span
-              title="La cartella è condivisa con altre app: la dimensione include anche le altre"
+              title="The folder is shared with other apps: the size includes them too"
               className="flex-none text-muted-fg"
             >
-              <Link2 size={13} aria-label="Cartella condivisa con altre app" />
+              <Link2 size={13} aria-label="Folder shared with other apps" />
             </span>
           )}
         </div>
@@ -156,13 +156,13 @@ function Row({
           title={
             app.installLocation
               ? app.locationDerived
-                ? `${app.installLocation} (ricavata dall'icona o dal disinstallatore)`
+                ? `${app.installLocation} (derived from the icon or the uninstaller)`
                 : app.installLocation
-              : "L'app non indica dove è installata"
+              : "The app does not say where it is installed"
           }
           className="truncate font-mono text-[11.5px] text-muted-fg"
         >
-          {app.installLocation ?? "Posizione sconosciuta"}
+          {app.installLocation ?? "Unknown location"}
         </div>
       </td>
       <td className={`${CELL} max-w-0 truncate text-muted-fg`} title={app.publisher ?? undefined}>
@@ -181,21 +181,21 @@ function Row({
       <td className={`${CELL} text-right`}>
         <div className="flex justify-end gap-0.5">
           <ActionButton
-            label={`Analizza la cartella di ${app.name}`}
+            label={`Analyze the folder of ${app.name}`}
             disabled={!canAct}
             onClick={() => analyzeApp(app)}
           >
             <ScanSearch size={15} />
           </ActionButton>
           <ActionButton
-            label={`Apri la cartella di ${app.name} in Esplora risorse`}
+            label={`Open the folder of ${app.name} in File Explorer`}
             disabled={!canAct}
             onClick={() => openAppFolder(app)}
           >
             <ExternalLink size={15} />
           </ActionButton>
           <ActionButton
-            label={`Copia il percorso di ${app.name}`}
+            label={`Copy the path of ${app.name}`}
             disabled={!hasPath}
             onClick={() => copyAppPath(app)}
           >
@@ -228,15 +228,15 @@ export function AppsView() {
   const pct = progress.total ? Math.min(100, (progress.done / progress.total) * 100) : 0;
 
   return (
-    <section aria-label="App installate" className="flex min-w-0 flex-1 flex-col">
+    <section aria-label="Installed apps" className="flex min-w-0 flex-1 flex-col">
       <div className="flex h-[52px] flex-none items-center gap-2.5 border-b border-border px-4">
         <Package size={16} className="flex-none text-muted-fg" aria-hidden="true" />
-        <h2 className="m-0 text-[15px] font-semibold">App installate</h2>
+        <h2 className="m-0 text-[15px] font-semibold">Installed apps</h2>
         <div className="ml-2 flex h-8 min-w-0 max-w-[420px] flex-1 items-center gap-2 rounded-md border border-border bg-muted px-2.5">
           <input
             type="search"
-            aria-label="Cerca tra le app per nome o editore"
-            placeholder="Cerca per nome o editore…"
+            aria-label="Search apps by name or publisher"
+            placeholder="Search by name or publisher…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-muted-fg"
@@ -246,12 +246,12 @@ export function AppsView() {
         {measuring ? (
           <Button variant="danger" size="sm" onClick={cancelAppSizes}>
             <X size={15} />
-            Annulla misura
+            Cancel measuring
           </Button>
         ) : (
           <Button size="sm" disabled={loading || !apps?.length} onClick={() => void measureApps()}>
             <RefreshCw size={15} />
-            Misura di nuovo
+            Measure again
           </Button>
         )}
       </div>
@@ -259,10 +259,10 @@ export function AppsView() {
       <div className="flex h-9 flex-none items-center gap-3 border-b border-border px-4 text-xs text-muted-fg tabular-nums">
         {measuring ? (
           <>
-            <span>{`Misura delle cartelle: ${fmtInt(progress.done)} di ${fmtInt(progress.total)}`}</span>
+            <span>{`Measuring folders: ${fmtInt(progress.done)} of ${fmtInt(progress.total)}`}</span>
             <div
               role="progressbar"
-              aria-label="Avanzamento della misura delle app"
+              aria-label="App measuring progress"
               aria-valuenow={Math.round(pct)}
               aria-valuemin={0}
               aria-valuemax={100}
@@ -274,66 +274,66 @@ export function AppsView() {
         ) : (
           <span>
             {apps
-              ? `${fmtInt(rows.length)}${rows.length === apps.length ? "" : ` di ${fmtInt(apps.length)}`} app · ${fmtSize(sum.size)} misurati in ${fmtInt(sum.measuredApps)} cartelle`
+              ? `${fmtInt(rows.length)}${rows.length === apps.length ? "" : ` of ${fmtInt(apps.length)}`} ${apps.length === 1 ? "app" : "apps"} · ${fmtSize(sum.size)} measured in ${fmtInt(sum.measuredApps)} ${sum.measuredApps === 1 ? "folder" : "folders"}`
               : ""}
           </span>
         )}
         <span className="ml-auto truncate">
-          App desktop del registro di Windows; le app di Microsoft Store non sono incluse. Le
-          dimensioni con ~ sono quelle dichiarate dall'app.
+          Desktop apps from the Windows registry; Microsoft Store apps are not included. Sizes
+          marked with ~ are the ones declared by the app.
         </span>
       </div>
 
       <div
         tabIndex={0}
         role="region"
-        aria-label="Elenco delle app installate"
+        aria-label="Installed apps list"
         className="min-h-0 flex-1 overflow-auto"
       >
         {loading || apps === null ? (
-          <p className="m-0 p-8 text-center text-muted-fg">Lettura delle app installate…</p>
+          <p className="m-0 p-8 text-center text-muted-fg">Reading installed apps…</p>
         ) : rows.length === 0 ? (
           <p className="m-0 p-8 text-center text-muted-fg">
             {apps.length === 0
-              ? "Nessuna app trovata."
-              : `Nessuna app corrisponde a «${query.trim()}».`}
+              ? "No apps found."
+              : `No apps match "${query.trim()}".`}
           </p>
         ) : (
           <table className="w-full table-fixed border-collapse text-[13px]">
             <thead className="sticky top-0 z-[1] bg-bg text-xs">
               <tr className="h-[34px] border-b border-border">
-                <SortHeader label="Nome e posizione" sortKey="name" defaultDir={1} width="34%" />
-                <SortHeader label="Editore" sortKey="publisher" defaultDir={1} width="16%" />
+                <SortHeader label="Name and location" sortKey="name" defaultDir={1} width="34%" />
+                <SortHeader label="Publisher" sortKey="publisher" defaultDir={1} width="16%" />
                 <th
                   scope="col"
                   style={{ width: "9%" }}
                   className={`${CELL} text-left font-medium text-muted-fg`}
                 >
-                  Versione
+                  Version
                 </th>
                 <th
                   scope="col"
                   style={{ width: "10%" }}
                   className={`${CELL} text-left font-medium text-muted-fg`}
                 >
-                  Installata
+                  Installed
                 </th>
                 <SortHeader
-                  label="Dimensione"
+                  label="Size"
                   sortKey="size"
                   defaultDir={-1}
                   align="right"
                   width="11%"
                 />
                 <SortHeader
-                  label="Su disco"
+                  label="On disk"
                   sortKey="disk"
                   defaultDir={-1}
                   align="right"
                   width="9%"
                 />
                 <th scope="col" style={{ width: "11%" }} className={CELL}>
-                  <span className="sr-only">Azioni</span>
+                  <span className="sr-only">Actions</span>
                 </th>
               </tr>
             </thead>

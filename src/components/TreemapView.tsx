@@ -24,7 +24,7 @@ const kidsOf = (n: TreeNode) =>
 const canEnter = (n: TreeNode) => n.isDir && !n.denied && n.childCount > 0;
 
 export function TreemapView({ root }: { root: TreeNode }) {
-  // I figli vengono caricati a richiesta: la versione della cache segnala quando sono cambiati.
+  // Children are loaded on demand: the cache version signals when they have changed.
   const treeVersion = useStore((s) => s.treeVersion);
   const tmRootId = useStore((s) => s.tmRoot);
   const selected = useStore((s) => s.selected);
@@ -72,7 +72,7 @@ export function TreemapView({ root }: { root: TreeNode }) {
       }
     }
     return { groups, leaves };
-    // treeVersion: i figli di `tm` e dei suoi gruppi arrivano a richiesta dal core.
+    // treeVersion: the children of `tm` and of its groups arrive on demand from the core.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tm, size, treeVersion]);
 
@@ -88,8 +88,8 @@ export function TreemapView({ root }: { root: TreeNode }) {
       <div className="flex min-w-0 items-center gap-2.5">
         <button
           type="button"
-          aria-label="Livello superiore"
-          title="Livello superiore"
+          aria-label="Up one level"
+          title="Up one level"
           disabled={tm === root}
           onClick={() => tm.parent && goTo(tm.parent.id)}
           className={`grid size-[30px] flex-none place-items-center rounded-md border border-border bg-bg hover:bg-hover ${tm === root ? "opacity-45" : ""}`}
@@ -97,7 +97,7 @@ export function TreemapView({ root }: { root: TreeNode }) {
           <ArrowUp size={15} />
         </button>
         <nav
-          aria-label="Percorso treemap"
+          aria-label="Treemap path"
           className="flex min-w-0 items-center gap-0.5 overflow-hidden"
         >
           {chain.map((n, i) => {
@@ -118,14 +118,14 @@ export function TreemapView({ root }: { root: TreeNode }) {
           })}
         </nav>
         <span className="ml-auto text-xs whitespace-nowrap text-muted-fg tabular-nums">
-          {`${fmtInt(tm.childCount)} elementi · ${fmtSize(tm.size)}`}
+          {`${fmtInt(tm.childCount)} ${tm.childCount === 1 ? "item" : "items"} · ${fmtSize(tm.size)}`}
         </span>
       </div>
 
       <div
         ref={boxRef}
         role="img"
-        aria-label={`Treemap di ${tm.path}, ${fmtSize(tm.size)}. Usa la vista Albero per la navigazione da tastiera.`}
+        aria-label={`Treemap of ${tm.path}, ${fmtSize(tm.size)}. Use the Tree view for keyboard navigation.`}
         onMouseLeave={() => setHover(null)}
         className="relative min-h-[220px] flex-1 overflow-hidden rounded-lg bg-muted select-none"
       >
@@ -180,7 +180,7 @@ export function TreemapView({ root }: { root: TreeNode }) {
               {w > 58 && h > 34 && (
                 <>
                   <span className="truncate text-[11.5px] font-semibold whitespace-nowrap">
-                    {n.agg ? `${n.parent?.name} · file` : n.name}
+                    {n.agg ? `${n.parent?.name} · files` : n.name}
                   </span>
                   <span className="text-[11px] whitespace-nowrap tabular-nums">
                     {fmtSize(n.size)}
@@ -194,7 +194,7 @@ export function TreemapView({ root }: { root: TreeNode }) {
 
       <div
         role="group"
-        aria-label="Legenda"
+        aria-label="Legend"
         className="flex flex-wrap gap-x-[18px] gap-y-1.5 text-xs"
       >
         {TYPES.map((t) => {
@@ -234,15 +234,15 @@ function Tooltip({ hover, total }: { hover: Hover; total: number }) {
       </div>
       <div className="font-mono text-[11px] break-all text-muted-fg">{node.path}</div>
       <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-xs">
-        <span className="text-muted-fg">Dimensione</span>
+        <span className="text-muted-fg">Size</span>
         <span className="text-right font-medium">{fmtSize(node.size)}</span>
-        <span className="text-muted-fg">Della vista</span>
+        <span className="text-muted-fg">Of view</span>
         <span className="text-right">{fmtPct(total ? (node.size / total) * 100 : 0)}</span>
-        <span className="text-muted-fg">Tipo</span>
+        <span className="text-muted-fg">Type</span>
         <span className="text-right">
-          {node.isDir ? `${type.label} (prevalente)` : `${type.label} · ${node.ext}`}
+          {node.isDir ? `${type.label} (predominant)` : `${type.label} · ${node.ext}`}
         </span>
-        <span className="text-muted-fg">File</span>
+        <span className="text-muted-fg">Files</span>
         <span className="text-right">{fmtInt(node.files)}</span>
       </div>
     </div>

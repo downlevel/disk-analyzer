@@ -20,13 +20,13 @@ vi.mock("@tauri-apps/api/event", () => ({
 
 import { EVENT_DONE, EVENT_FAILED, EVENT_PROGRESS, tauriScanner } from "./tauriScanner";
 
-const target: ScanTarget = { path: "C:\\Dati" };
+const target: ScanTarget = { path: "C:\\Data" };
 
 function handlers(): ScanHandlers {
   return { onProgress: vi.fn(), onDone: vi.fn(), onDenied: vi.fn(), onError: vi.fn() };
 }
 
-/** Avvia una scansione e restituisce l'id assegnato, letto dalla chiamata a `start_scan`. */
+/** Starts a scan and returns the assigned id, read from the `start_scan` call. */
 async function startScan(h: ScanHandlers) {
   const cancel = tauriScanner.start(target, h);
   await vi.waitFor(() =>
@@ -49,15 +49,15 @@ beforeEach(() => {
 });
 
 describe("tauriScanner", () => {
-  it("avvia la scansione sul percorso richiesto dopo aver ascoltato gli eventi", async () => {
+  it("starts the scan on the requested path after listening to the events", async () => {
     const { path } = await startScan(handlers());
-    expect(path).toBe("C:\\Dati");
+    expect(path).toBe("C:\\Data");
     expect([...mocks.listeners.keys()].sort()).toEqual(
       [EVENT_DONE, EVENT_FAILED, EVENT_PROGRESS].sort(),
     );
   });
 
-  it("converte l'avanzamento e ignora gli eventi di altre scansioni", async () => {
+  it("converts progress and ignores events from other scans", async () => {
     const h = handlers();
     const { scanId } = await startScan(h);
 
@@ -66,7 +66,7 @@ describe("tauriScanner", () => {
       files: 1,
       dirs: 1,
       bytes: 1,
-      currentPath: "altro",
+      currentPath: "other",
       elapsedMs: 1,
       fraction: null,
     });
@@ -77,13 +77,13 @@ describe("tauriScanner", () => {
       files: 10,
       dirs: 2,
       bytes: 2048,
-      currentPath: "C:\\Dati\\a",
+      currentPath: "C:\\Data\\a",
       elapsedMs: 300,
       fraction: 0.25,
     });
     expect(h.onProgress).toHaveBeenCalledWith({
       p: 0.25,
-      cur: "C:\\Dati\\a",
+      cur: "C:\\Data\\a",
       files: 10,
       dirs: 2,
       bytes: 2048,
@@ -91,7 +91,7 @@ describe("tauriScanner", () => {
     });
   });
 
-  it("riporta p nullo quando l'avanzamento non è stimabile", async () => {
+  it("reports null p when progress can't be estimated", async () => {
     const h = handlers();
     const { scanId } = await startScan(h);
     emit(EVENT_PROGRESS, {
@@ -106,7 +106,7 @@ describe("tauriScanner", () => {
     expect(h.onProgress).toHaveBeenCalledWith(expect.objectContaining({ p: null }));
   });
 
-  it("al completamento passa l'esito intero e smette di ascoltare", async () => {
+  it("on completion passes the whole result and stops listening", async () => {
     const h = handlers();
     const { scanId } = await startScan(h);
     const done = { scanId, files: 3, dirs: 1, bytes: 9, denied: 0, elapsedMs: 1500, root: {} };
@@ -115,8 +115,8 @@ describe("tauriScanner", () => {
     expect(mocks.unlisten).toHaveBeenCalledTimes(3);
   });
 
-  it("distingue accesso negato, annullamento ed errori generici", async () => {
-    const base = { path: "C:\\Dati", message: "msg", files: 0, bytes: 0 };
+  it("distinguishes access denied, cancellation and generic errors", async () => {
+    const base = { path: "C:\\Data", message: "msg", files: 0, bytes: 0 };
 
     const denied = handlers();
     let scan = await startScan(denied);
@@ -137,12 +137,12 @@ describe("tauriScanner", () => {
       ...base,
       scanId: scan.scanId,
       kind: "notFound",
-      message: "Percorso non trovato",
+      message: "Path not found",
     });
-    expect(broken.onError).toHaveBeenCalledWith("Percorso non trovato");
+    expect(broken.onError).toHaveBeenCalledWith("Path not found");
   });
 
-  it("annullando chiede l'annullamento al core e smette di ascoltare", async () => {
+  it("cancelling asks the core to cancel and stops listening", async () => {
     const h = handlers();
     const { cancel, scanId } = await startScan(h);
     cancel();
@@ -154,7 +154,7 @@ describe("tauriScanner", () => {
     expect(mocks.invoke).not.toHaveBeenCalled();
   });
 
-  it("riporta l'errore se il comando di avvio fallisce", async () => {
+  it("reports the error if the start command fails", async () => {
     mocks.invoke.mockRejectedValueOnce(new Error("boom"));
     const h = handlers();
     tauriScanner.start(target, h);

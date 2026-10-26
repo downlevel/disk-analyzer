@@ -1,4 +1,4 @@
-// Scanner: comandi ed eventi Tauri verso il core Rust (src-tauri/src/commands.rs).
+// Scanner: Tauri commands and events towards the Rust core (src-tauri/src/commands.rs).
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import type { UnlistenFn } from "@tauri-apps/api/event";
@@ -7,13 +7,13 @@ import type { ScanFailed } from "../bindings/ScanFailed";
 import type { ScanProgress } from "../bindings/ScanProgress";
 import type { Scanner } from "./types";
 
-// Devono coincidere con le costanti in src-tauri/src/model.rs.
+// Must match the constants in src-tauri/src/model.rs.
 export const EVENT_PROGRESS = "scan:progress";
 export const EVENT_DONE = "scan:done";
 export const EVENT_FAILED = "scan:failed";
 
-// L'identificativo lo assegna il frontend, così gli eventi si possono ascoltare prima di avviare
-// la scansione senza rischiare di perderne.
+// The identifier is assigned by the frontend, so events can be listened to before starting
+// the scan without risking missing any.
 let nextScanId = 1;
 
 export const tauriScanner: Scanner = {
@@ -53,7 +53,7 @@ export const tauriScanner: Scanner = {
         }),
       ]);
 
-      // Annullata mentre ci si registrava agli eventi.
+      // Cancelled while registering for the events.
       if (stopped) {
         for (const unlisten of unlistenAll) unlisten();
         return;

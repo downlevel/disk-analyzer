@@ -2,26 +2,26 @@
 import type { AppScope } from "./AppScope";
 
 /**
- * App desktop installata, come risulta dal registro di Windows.
+ * Installed desktop app, as listed in the Windows registry.
  */
 export type InstalledApp = { 
 /**
- * Identificativo stabile: ambito e nome della chiave di registro.
+ * Stable identifier: scope and registry key name.
  */
 id: string, name: string, version: string | null, publisher: string | null, 
 /**
- * Cartella di installazione, se nota.
+ * Install folder, if known.
  */
 installLocation: string | null, 
 /**
- * La cartella non è dichiarata dall'app: è stata ricavata dall'icona o dal disinstallatore.
+ * The folder is not declared by the app: it was derived from the icon or the uninstaller.
  */
 locationDerived: boolean, 
 /**
- * Più app dichiarano la stessa cartella (es. le app di Office): la dimensione è condivisa.
+ * Several apps declare the same folder (e.g. Office apps): the size is shared.
  */
 sharedLocation: boolean, 
 /**
- * Dimensione dichiarata dall'app nel registro, in byte (spesso assente o approssimativa).
+ * Size declared by the app in the registry, in bytes (often missing or approximate).
  */
 estimatedSize: number | null, installDate: string | null, scope: AppScope, };

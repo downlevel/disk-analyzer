@@ -24,24 +24,24 @@ export function StatusBar() {
       : null;
 
   let dot = "var(--muted-fg)";
-  let state = "Pronto";
+  let state = "Ready";
   let items: string[] = [];
   if (!onDisk) {
     dot = appsMeasuring ? "var(--primary)" : "var(--ok)";
-    state = appsMeasuring ? "Misura delle app in corso" : "App installate";
-    items = apps ? [`${fmtInt(apps.length)} app`] : [];
+    state = appsMeasuring ? "Measuring apps" : "Installed apps";
+    items = apps ? [`${fmtInt(apps.length)} ${apps.length === 1 ? "app" : "apps"}`] : [];
   } else if (done) {
     dot = "var(--ok)";
-    state = `Scansione completata in ${durationSec} s`;
-    items = [fmtSize(done.bytes), `${fmtInt(done.files)} file`, `${fmtInt(done.dirs)} cartelle`];
+    state = `Scan completed in ${durationSec} s`;
+    items = [fmtSize(done.bytes), `${fmtInt(done.files)} files`, `${fmtInt(done.dirs)} folders`];
   } else if (screen === "scanning" && scan) {
     dot = "var(--primary)";
-    state = `Scansione in corso · ${fmtProgress(scan.p)}`;
-    items = [`${fmtInt(scan.files)} file`, `${fmtInt(scan.dirs)} cartelle`, fmtSize(scan.bytes)];
+    state = `Scanning · ${fmtProgress(scan.p)}`;
+    items = [`${fmtInt(scan.files)} files`, `${fmtInt(scan.dirs)} folders`, fmtSize(scan.bytes)];
   } else if (screen === "error" && error) {
     const isDenied = error.kind === "denied";
     dot = isDenied ? "var(--danger)" : "var(--warn)";
-    state = isDenied ? "Accesso negato" : "Scansione annullata";
+    state = isDenied ? "Access denied" : "Scan cancelled";
   }
 
   return (
@@ -61,13 +61,13 @@ export function StatusBar() {
           className="flex h-5 items-center gap-[5px] rounded px-1.5 text-xs text-warn hover:bg-warn-soft"
         >
           <TriangleAlert size={13} />
-          {denied === 1 ? "1 cartella non accessibile" : `${denied} cartelle non accessibili`}
+          {denied === 1 ? "1 folder not accessible" : `${denied} folders not accessible`}
         </button>
       )}
       <span>
         {drive
-          ? `${drive.letter} · ${fmtSize(drive.total - drive.used)} liberi di ${fmtSize(drive.total)}`
-          : "Sola lettura"}
+          ? `${drive.letter} · ${fmtSize(drive.total - drive.used)} free of ${fmtSize(drive.total)}`
+          : "Read-only"}
       </span>
     </footer>
   );

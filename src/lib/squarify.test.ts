@@ -4,7 +4,7 @@ import { squarify } from "./squarify";
 const items = [60, 30, 20, 10, 5, 5].map((value, i) => ({ value, data: `n${i}` }));
 
 describe("squarify", () => {
-  it("restituisce un rettangolo per elemento, dentro l'area disponibile", () => {
+  it("returns one rectangle per item, inside the available area", () => {
     const rects = squarify(items, 10, 20, 400, 300);
     expect(rects).toHaveLength(items.length);
     for (const r of rects) {
@@ -15,7 +15,7 @@ describe("squarify", () => {
     }
   });
 
-  it("riempie l'intera area e assegna a ciascuno una superficie proporzionale", () => {
+  it("fills the whole area and gives each item a proportional surface", () => {
     const rects = squarify(items, 0, 0, 400, 300);
     const total = items.reduce((a, b) => a + b.value, 0);
     const area = rects.reduce((a, r) => a + r.w * r.h, 0);
@@ -26,7 +26,7 @@ describe("squarify", () => {
     }
   });
 
-  it("non sovrappone i rettangoli", () => {
+  it("does not overlap the rectangles", () => {
     const rects = squarify(items, 0, 0, 400, 300);
     for (let i = 0; i < rects.length; i++) {
       for (let j = i + 1; j < rects.length; j++) {
@@ -39,7 +39,7 @@ describe("squarify", () => {
     }
   });
 
-  it("gestisce input vuoto e aree nulle", () => {
+  it("handles empty input and null areas", () => {
     expect(squarify([], 0, 0, 100, 100)).toEqual([]);
     expect(squarify(items, 0, 0, 0, 100)).toEqual([]);
     expect(squarify([{ value: 0, data: "x" }], 0, 0, 100, 100)).toEqual([]);

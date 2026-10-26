@@ -2,10 +2,10 @@
 import type { Node } from "./Node";
 
 /**
- * Scansione completata.
+ * Scan completed.
  */
 export type ScanDone = { scanId: number, files: number, dirs: number, bytes: number, 
 /**
- * Cartelle che non è stato possibile leggere (permesso negato).
+ * Folders that could not be read (permission denied).
  */
 denied: number, elapsedMs: number, root: Node, };

@@ -4,23 +4,23 @@ import type { NodeKind } from "./NodeKind";
 import type { TypeBreakdown } from "./TypeBreakdown";
 
 /**
- * Elemento dell'albero delle cartelle. Il frontend lo richiede a livelli, a mano a mano che
- * l'utente espande le cartelle: l'albero completo resta in memoria lato Rust.
+ * Item of the folder tree. The frontend requests it level by level, as the user expands
+ * folders: the full tree stays in memory on the Rust side.
  */
 export type Node = { id: number, parentId: number | null, 
 /**
- * Vuoto per i nodi aggregati (il frontend compone "File (N)").
+ * Empty for aggregate nodes (the frontend composes "Files (N)").
  */
 name: string, 
 /**
- * Percorso completo; per i nodi aggregati è quello della cartella che li contiene.
+ * Full path; for aggregate nodes it is the path of the folder that contains them.
  */
 path: string, kind: NodeKind, 
 /**
- * Dimensione logica in byte.
+ * Logical size in bytes.
  */
 size: number, 
 /**
- * Dimensione su disco in byte.
+ * Size on disk in bytes.
  */
 disk: number, files: number, dirs: number, fileType: FileType | null, ext: string | null, modified: string | null, childCount: number, byType: TypeBreakdown, };

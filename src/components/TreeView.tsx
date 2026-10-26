@@ -9,7 +9,7 @@ import type { SortKey, TreeNode } from "../lib/types";
 import { useStore } from "../store";
 
 const HEADER_H = 34;
-/** Righe disegnate oltre quelle visibili, sopra e sotto. */
+/** Rows rendered beyond the visible ones, above and below. */
 const OVERSCAN_ROWS = 10;
 const GRID =
   "grid grid-cols-[minmax(260px,1fr)_108px_108px_minmax(170px,230px)_96px] items-center gap-x-3 px-4";
@@ -73,20 +73,20 @@ export function TreeView({ root }: { root: TreeNode }) {
   const toggle = useStore((s) => s.toggle);
   const select = useStore((s) => s.select);
   const act = useStore((s) => s.act);
-  // I figli vengono caricati a richiesta: la versione della cache segnala quando sono cambiati.
+  // Children are loaded on demand: the cache version signals when they have changed.
   const treeVersion = useStore((s) => s.treeVersion);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [focused, setFocused] = useState(false);
   const rows = useMemo(
     () => flatten(root, expanded, sort.key, sort.dir),
-    // treeVersion: la cache dei nodi è mutabile, il numero di versione la rende osservabile.
+    // treeVersion: the node cache is mutable, the version number makes it observable.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [root, expanded, sort.key, sort.dir, treeVersion],
   );
 
-  // Virtualizzazione: si disegnano solo le righe visibili più un po' di margine; il resto è
-  // sostituito da due spaziatori della stessa altezza, così la barra di scorrimento resta fedele.
+  // Virtualization: only the visible rows plus a small margin are rendered; the rest is
+  // replaced by two spacers of the same height, so the scrollbar stays accurate.
   const [scrollRow, setScrollRow] = useState(0);
   const [viewRows, setViewRows] = useState(30);
   useEffect(() => {
@@ -111,7 +111,7 @@ export function TreeView({ root }: { root: TreeNode }) {
     }
   };
 
-  // Su richiesta (reveal, chiusura menu) mostra la riga selezionata e riporta il focus sull'albero.
+  // On request (reveal, menu close) show the selected row and move focus back to the tree.
   const rowsRef = useRef(rows);
   useEffect(() => {
     rowsRef.current = rows;
@@ -200,7 +200,7 @@ export function TreeView({ root }: { root: TreeNode }) {
     <div
       ref={containerRef}
       role="treegrid"
-      aria-label="Albero delle cartelle"
+      aria-label="Folder tree"
       aria-readonly="true"
       aria-rowcount={rows.length + 1}
       tabIndex={0}
@@ -218,11 +218,11 @@ export function TreeView({ root }: { root: TreeNode }) {
         style={{ height: HEADER_H }}
         className={`${GRID} sticky top-0 z-[1] border-b border-border bg-bg text-xs font-medium text-muted-fg`}
       >
-        <SortHeader label="Nome" sortKey="name" defaultDir={1} align="left" />
-        <SortHeader label="Dimensione" sortKey="size" defaultDir={-1} />
-        <SortHeader label="Su disco" sortKey="disk" defaultDir={-1} />
-        <div role="columnheader">% del padre</div>
-        <SortHeader label="N. file" sortKey="files" defaultDir={-1} />
+        <SortHeader label="Name" sortKey="name" defaultDir={1} align="left" />
+        <SortHeader label="Size" sortKey="size" defaultDir={-1} />
+        <SortHeader label="On disk" sortKey="disk" defaultDir={-1} />
+        <div role="columnheader">% of parent</div>
+        <SortHeader label="Files" sortKey="files" defaultDir={-1} />
       </div>
       <div aria-hidden="true" style={{ height: start * TREE_ROW_H }} />
       {rows.slice(start, end).map(({ node, depth }, k) => {
@@ -300,7 +300,7 @@ export function TreeView({ root }: { root: TreeNode }) {
               role="gridcell"
               className={`text-right whitespace-nowrap ${node.denied ? "text-warn" : ""} ${node.isDir ? "font-medium" : ""}`}
             >
-              {node.denied ? "Accesso negato" : fmtSize(node.size)}
+              {node.denied ? "Access denied" : fmtSize(node.size)}
             </div>
             <div role="gridcell" className="text-right whitespace-nowrap text-muted-fg">
               {node.denied ? "—" : fmtSize(node.disk)}

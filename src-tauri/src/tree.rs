@@ -1,9 +1,9 @@
-//! Albero dei risultati di una scansione.
+//! Tree of a scan's results.
 //!
-//! Lo scanner produce un albero di [`DirNode`]; [`ScanTree::build`] lo appiattisce in un'arena
-//! compatta (`Vec<Entry>`) in cui i figli di ogni nodo sono contigui. Per tenere sotto controllo
-//! la memoria su dischi grandi, di ogni cartella si conservano singolarmente solo i file più
-//! grandi: gli altri sono riuniti in un unico nodo aggregato "File (N)".
+//! The scanner produces a tree of [`DirNode`]; [`ScanTree::build`] flattens it into a compact
+//! arena (`Vec<Entry>`) in which the children of each node are contiguous. To keep memory
+//! under control on large disks, only the largest files of each folder are kept individually:
+//! the others are merged into a single aggregate node "Files (N)".
 
 use std::cmp::Reverse;
 use std::collections::{BinaryHeap, VecDeque};
@@ -14,17 +14,17 @@ use crate::model::{ExtStat, FileType, Node, NodeKind, TypeBreakdown, TypeStat, T
 pub(crate) const NO_PARENT: u32 = u32::MAX;
 const TYPES: usize = FileType::ALL.len();
 
-/// File conservato singolarmente.
+/// File kept individually.
 pub(crate) struct FileNode {
     pub name: String,
     pub size: u64,
     pub disk: u64,
     pub ftype: FileType,
-    /// Secondi dall'epoca Unix (0 se sconosciuto).
+    /// Seconds since the Unix epoch (0 if unknown).
     pub modified: i64,
 }
 
-/// File di una cartella riuniti in un unico nodo.
+/// Files of a folder merged into a single node.
 #[derive(Default)]
 pub(crate) struct Agg {
     pub size: u64,
@@ -33,7 +33,7 @@ pub(crate) struct Agg {
     pub by_type: [u64; TYPES],
 }
 
-/// Cartella appena scansionata, prima dell'appiattimento nell'arena.
+/// Freshly scanned folder, before being flattened into the arena.
 pub(crate) struct DirNode {
     pub name: String,
     pub denied: bool,
@@ -64,10 +64,10 @@ impl DirNode {
     }
 }
 
-/// Totale per estensione, su tutti i file scansionati (anche quelli aggregati).
+/// Total per extension, over all scanned files (including aggregated ones).
 #[derive(Debug, Clone)]
 pub struct ExtTotal {
-    /// Estensione con il punto, oppure "(nessuna)".
+    /// Extension with the dot, or "(none)".
     pub ext: String,
     pub ftype: FileType,
     pub size: u64,
@@ -168,7 +168,7 @@ pub struct ScanTree {
 }
 
 impl ScanTree {
-    /// Appiattisce l'albero in ampiezza, così i figli di ogni nodo risultano contigui.
+    /// Flattens the tree breadth-first, so the children of each node are contiguous.
     pub(crate) fn build(root_path: String, mut root: DirNode, exts: Vec<ExtTotal>) -> ScanTree {
         root.name = root_path.clone();
         let mut entries = vec![Entry::from_dir(&root, NO_PARENT)];
@@ -222,7 +222,7 @@ impl ScanTree {
         self.entries.get(usize::try_from(id).ok()?)
     }
 
-    /// Percorso completo; per i nodi aggregati quello della cartella che li contiene.
+    /// Full path; for aggregate nodes, that of the folder that contains them.
     fn path_of(&self, id: u32) -> String {
         let mut id = id;
         if self.entries[id as usize].kind == NodeKind::Agg {
@@ -270,7 +270,7 @@ impl ScanTree {
         Some(self.node(id as u32))
     }
 
-    /// Figli di un nodo dal più grande, al massimo `cap`; il nodo aggregato, se c'è, resta sempre.
+    /// Children of a node, largest first, at most `cap`; the aggregate node, if any, is always kept.
     pub fn children(&self, id: u64, cap: usize) -> Vec<Node> {
         let Some(e) = self.entry(id) else {
             return Vec::new();
@@ -291,7 +291,7 @@ impl ScanTree {
         ids.into_iter().map(|c| self.node(c)).collect()
     }
 
-    /// Catena di antenati dalla radice al nodo (incluso).
+    /// Chain of ancestors from the root to the node (included).
     pub fn ancestors(&self, id: u64) -> Vec<u64> {
         let mut chain = Vec::new();
         let mut cur = self.entry(id).map(|_| id as u32);
@@ -304,7 +304,7 @@ impl ScanTree {
         chain
     }
 
-    /// I file più grandi, opzionalmente di un solo tipo.
+    /// The largest files, optionally of a single type.
     pub fn top_files(&self, filter: Option<FileType>, limit: usize) -> Vec<Node> {
         let mut heap: BinaryHeap<Reverse<(u64, u32)>> = BinaryHeap::with_capacity(limit + 1);
         for (i, e) in self.entries.iter().enumerate() {

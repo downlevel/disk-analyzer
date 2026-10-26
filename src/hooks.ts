@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import type { MenuSource, TreeNode } from "./lib/types";
 import { useStore } from "./store";
 
-/** Apre il menu contestuale di un nodo alle coordinate indicate, tenendolo dentro la finestra. */
+/** Opens a node's context menu at the given coordinates, keeping it inside the window. */
 export function openMenuAt(
   x: number,
   y: number,
@@ -36,7 +36,7 @@ export function useWindowWidth(): number {
   return width;
 }
 
-/** La sidebar si comprime sotto i 1000px, salvo scelta manuale dell'utente. */
+/** The sidebar collapses below 1000px, unless the user chose manually. */
 export function useSidebarCollapsed(): [boolean, () => void] {
   const width = useWindowWidth();
   const manual = useStore((s) => s.sidebarManual);
@@ -45,7 +45,7 @@ export function useSidebarCollapsed(): [boolean, () => void] {
   return [collapsed, () => setManual(!collapsed)];
 }
 
-/** Apre il selettore cartelle ancorato al pulsante cliccato. */
+/** Opens the folder picker anchored to the clicked button. */
 export function openPickerFrom(e: MouseEvent<HTMLElement>) {
   const r = e.currentTarget.getBoundingClientRect();
   const side = r.width < 80;

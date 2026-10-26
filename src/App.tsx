@@ -38,8 +38,8 @@ export default function App() {
   const tab = useStore((s) => s.tab);
   const section = useStore((s) => s.section);
 
-  // Elenco delle unità: all'avvio e ogni volta che la finestra torna in primo piano (lo spazio
-  // libero cambia anche fuori dall'app, es. cancellando file da Esplora risorse).
+  // Drive list: on startup and whenever the window regains focus (free space also changes
+  // outside the app, e.g. when deleting files from File Explorer).
   useEffect(() => {
     const refresh = () => void useStore.getState().loadDrives();
     refresh();
@@ -47,7 +47,7 @@ export default function App() {
     return () => window.removeEventListener("focus", refresh);
   }, []);
 
-  // Scorciatoie globali: Esc chiude i menu, F5 riscansiona.
+  // Global shortcuts: Esc closes the menus, F5 rescans.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const s = useStore.getState();
@@ -86,7 +86,7 @@ export default function App() {
               </div>
             </>
           )}
-          {/* Menu e avvisi sono a posizione fissa; stanno dentro `main` per far parte di una regione. */}
+          {/* Menus and toasts are fixed-position; they live inside `main` so they belong to a landmark region. */}
           <ContextMenu />
           <FolderPicker />
           <Toast />

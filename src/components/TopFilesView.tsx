@@ -10,7 +10,7 @@ import type { TypeFilter } from "../store";
 const GRID =
   "grid grid-cols-[40px_minmax(240px,1.6fr)_110px_96px_minmax(120px,1fr)_104px] items-center gap-x-3 px-4";
 
-const CHIPS = [{ key: "all", label: "Tutti", color: "" }, ...TYPES];
+const CHIPS = [{ key: "all", label: "All", color: "" }, ...TYPES];
 
 export function TopFilesView() {
   const typeFilter = useStore((s) => s.typeFilter);
@@ -19,7 +19,7 @@ export function TopFilesView() {
   const setTypeFilter = useStore((s) => s.setTypeFilter);
   const select = useStore((s) => s.select);
 
-  // L'elenco arriva dal core (già ordinato e limitato) quando si apre la vista o si cambia filtro.
+  // The list comes from the core (already sorted and limited) when the view opens or the filter changes.
   const list = topFiles ?? [];
   const loading = topFiles === null;
   const max = list.length ? list[0].size : 1;
@@ -64,13 +64,13 @@ export function TopFilesView() {
         })}
         <span className="ml-auto text-xs text-muted-fg tabular-nums">
           {loading
-            ? "Caricamento…"
+            ? "Loading…"
             : list.length
-              ? `${fmtInt(list.length)} file · ${fmtSize(total)}`
-              : "Nessun file di questo tipo"}
+              ? `${fmtInt(list.length)} ${list.length === 1 ? "file" : "files"} · ${fmtSize(total)}`
+              : "No files of this type"}
         </span>
       </div>
-      <div role="grid" aria-label="File più grandi" className="min-h-0 flex-1 overflow-auto">
+      <div role="grid" aria-label="Largest files" className="min-h-0 flex-1 overflow-auto">
         <div
           role="row"
           className={`${GRID} sticky top-0 z-[1] h-[34px] border-b border-border bg-bg text-xs font-medium text-muted-fg`}
@@ -78,16 +78,16 @@ export function TopFilesView() {
           <div role="columnheader" className="text-right">
             #
           </div>
-          <div role="columnheader">Nome</div>
-          <div role="columnheader">Tipo</div>
+          <div role="columnheader">Name</div>
+          <div role="columnheader">Type</div>
           <div role="columnheader" className="text-right">
-            Dimensione ↓
+            Size ↓
           </div>
           <div role="columnheader">
-            <span className="sr-only">Proporzione</span>
+            <span className="sr-only">Proportion</span>
           </div>
           <div role="columnheader" className="text-right">
-            Modificato
+            Modified
           </div>
         </div>
         {list.map((f, i) => {

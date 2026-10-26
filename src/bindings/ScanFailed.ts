@@ -2,7 +2,7 @@
 import type { ScanFailureKind } from "./ScanFailureKind";
 
 /**
- * Scansione non completata: errore o annullamento. Per l'annullamento `files` e `bytes`
- * riportano quanto era stato analizzato.
+ * Scan not completed: error or cancellation. For a cancellation `files` and `bytes`
+ * report how much had been analyzed.
  */
 export type ScanFailed = { scanId: number, kind: ScanFailureKind, path: string, message: string, files: number, bytes: number, };

@@ -5,12 +5,12 @@ use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{EnvFilter, fmt};
 
-/// Mantiene attivo il thread di scrittura dei log: va conservato per tutta la vita dell'app.
+/// Keeps the log-writing thread alive: it must be held for the whole life of the app.
 #[allow(dead_code)]
 pub struct LogGuard(WorkerGuard);
 
-/// Imposta il logging su file (rotazione giornaliera) e su stderr. Il livello si può cambiare
-/// con la variabile d'ambiente `RUST_LOG`.
+/// Sets up logging to a file (daily rotation) and to stderr. The level can be changed
+/// with the `RUST_LOG` environment variable.
 pub fn init(log_dir: &Path) -> LogGuard {
     let _ = std::fs::create_dir_all(log_dir);
     let file = tracing_appender::rolling::daily(log_dir, "disk-analyzer.log");
@@ -19,7 +19,7 @@ pub fn init(log_dir: &Path) -> LogGuard {
     let filter = EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| EnvFilter::new("info,disk_analyzer_lib=debug"));
 
-    // try_init: non fallisce se un subscriber è già impostato (es. nei test).
+    // try_init: does not fail if a subscriber is already set (e.g. in tests).
     let _ = tracing_subscriber::registry()
         .with(filter)
         .with(fmt::layer().with_writer(writer).with_ansi(false))

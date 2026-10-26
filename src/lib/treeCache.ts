@@ -3,10 +3,10 @@ import { fmtInt } from "./format";
 import type { TreeNode } from "./types";
 
 /**
- * Nodi dell'albero finora ricevuti dal core Rust, indicizzati per id.
+ * Tree nodes received so far from the Rust core, indexed by id.
  *
- * Gli oggetti sono mutabili e mantengono la propria identità tra un aggiornamento e l'altro
- * (le viste li confrontano con `===`); chi modifica la cache segnala il cambiamento allo store.
+ * The objects are mutable and keep their identity across updates
+ * (views compare them with `===`); whoever modifies the cache signals the change to the store.
  */
 export class TreeCache {
   private nodes = new Map<number, TreeNode>();
@@ -23,11 +23,11 @@ export class TreeCache {
     return this.nodes.size;
   }
 
-  /** Inserisce o aggiorna un nodo; se il padre è già noto lo collega. */
+  /** Inserts or updates a node; if the parent is already known, links it. */
   upsert(dto: Node): TreeNode {
     const parent = dto.parentId != null ? (this.nodes.get(dto.parentId) ?? null) : null;
     const fields = {
-      name: dto.kind === "agg" ? `File (${fmtInt(dto.files)})` : dto.name,
+      name: dto.kind === "agg" ? `Files (${fmtInt(dto.files)})` : dto.name,
       path: dto.path,
       parentId: dto.parentId,
       isDir: dto.kind === "dir" || dto.kind === "denied",
@@ -61,7 +61,7 @@ export class TreeCache {
     return node;
   }
 
-  /** Registra i figli di un nodo (già ordinati dal core) e li collega al padre. */
+  /** Records a node's children (already sorted by the core) and links them to the parent. */
   setChildren(parentId: number, dtos: Node[]): TreeNode[] {
     const parent = this.nodes.get(parentId);
     const children = dtos.map((dto) => this.upsert(dto));

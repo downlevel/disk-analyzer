@@ -31,16 +31,16 @@ tauri-plugin-dialog = "2.8.3"
 winreg = "0.56.0"
 
 
-# Build di sviluppo: niente informazioni di debug per le dipendenze (il nostro codice le mantiene).
-# Dimezza RAM, tempo e spazio su disco della compilazione; il crate `windows` con il debug
-# completo mandava rustc fuori memoria su questo PC.
+# Dev build: no debug info for dependencies (our own code keeps it).
+# Halves RAM, time and disk space of the build; the `windows` crate with full debug info
+# ran rustc out of memory on low-RAM machines.
 [profile.dev.package."*"]
 debug = false
 
 # Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration
 [profile.release]
-# LTO "thin" e più unità di codegen: il link con LTO completo supera la RAM disponibile su
-# questo PC (come già successo a rustc con tokio). Il binario risulta di poco più grande.
+# "thin" LTO and more codegen units: a full-LTO link can exceed the available RAM on
+# low-memory machines. The resulting binary is slightly larger.
 codegen-units = 8
 lto = "thin"
 opt-level = 3

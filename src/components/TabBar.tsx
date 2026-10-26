@@ -27,7 +27,7 @@ export function TabBar() {
     <div className="flex flex-none items-center gap-3 border-b border-border px-4 py-2.5">
       <div
         role="tablist"
-        aria-label="Viste dei risultati"
+        aria-label="Result views"
         onKeyDown={onKeyDown}
         className={`inline-flex gap-0.5 rounded-lg bg-muted p-[3px] ${results ? "" : "opacity-55"}`}
       >

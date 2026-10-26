@@ -4,13 +4,13 @@ import type { ScanProgress, ScanTarget } from "../lib/types";
 export interface ScanHandlers {
   onProgress: (progress: ScanProgress) => void;
   onDone: (done: ScanDone) => void;
-  /** La cartella non è leggibile (permesso negato). */
+  /** The folder is not readable (permission denied). */
   onDenied: () => void;
-  /** Qualsiasi altro errore (percorso inesistente, errore di I/O…). */
+  /** Any other error (nonexistent path, I/O error…). */
   onError: (message: string) => void;
 }
 
 export interface Scanner {
-  /** Avvia una scansione e restituisce la funzione per annullarla. */
+  /** Starts a scan and returns the function to cancel it. */
   start: (target: ScanTarget, handlers: ScanHandlers) => () => void;
 }

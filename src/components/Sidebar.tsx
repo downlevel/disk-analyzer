@@ -22,14 +22,14 @@ export function Sidebar() {
       pct,
       active: section === "disk" && !!target && target.driveKey === d.key && screen !== "empty",
       barColor: pct > 90 ? "var(--danger)" : "var(--primary)",
-      label: `${d.name} (${d.letter}): ${Math.round(pct)}% usato`,
+      label: `${d.name} (${d.letter}): ${Math.round(pct)}% used`,
     };
   });
 
   if (collapsed) {
     return (
       <aside
-        aria-label="Unità e cartelle"
+        aria-label="Drives and folders"
         className="flex w-16 flex-none flex-col items-center gap-2 border-r border-border bg-sidebar px-2 py-3.5"
       >
         {drives.map(({ d, pct, active, barColor, label }) => (
@@ -54,8 +54,8 @@ export function Sidebar() {
         <div className="my-1 h-px w-8 bg-border" />
         <button
           type="button"
-          aria-label="Scegli cartella…"
-          title="Scegli cartella…"
+          aria-label="Choose folder…"
+          title="Choose folder…"
           aria-haspopup="menu"
           onClick={openPickerFrom}
           className="grid h-11 w-12 place-items-center rounded-lg border border-border bg-bg hover:bg-hover"
@@ -64,8 +64,8 @@ export function Sidebar() {
         </button>
         <button
           type="button"
-          aria-label="App installate"
-          title="App installate"
+          aria-label="Installed apps"
+          title="Installed apps"
           aria-pressed={section === "apps"}
           onClick={() => setSection("apps")}
           className={`grid h-11 w-12 place-items-center rounded-lg border hover:border-ring ${section === "apps" ? "border-primary bg-primary-soft" : "border-border bg-bg"}`}
@@ -78,11 +78,11 @@ export function Sidebar() {
 
   return (
     <aside
-      aria-label="Unità e cartelle"
+      aria-label="Drives and folders"
       className="flex w-64 flex-none flex-col gap-2 overflow-auto border-r border-border bg-sidebar px-3 py-3.5"
     >
       <div className="px-1 pb-0.5 text-[11px] font-semibold tracking-[0.05em] text-muted-fg uppercase">
-        Unità
+        Drives
       </div>
       {drives.map(({ d, pct, active, barColor, label }) => (
         <button
@@ -115,7 +115,7 @@ export function Sidebar() {
             />
           </div>
           <div className="flex justify-between gap-2 text-[11.5px] text-muted-fg tabular-nums">
-            <span>{`${fmtSize(d.total - d.used)} liberi di ${fmtSize(d.total)}`}</span>
+            <span>{`${fmtSize(d.total - d.used)} free of ${fmtSize(d.total)}`}</span>
             <span>{Math.round(pct)} %</span>
           </div>
         </button>
@@ -128,7 +128,7 @@ export function Sidebar() {
         className="flex h-[34px] items-center justify-center gap-2 rounded-md border border-border bg-bg font-medium hover:bg-hover"
       >
         <FolderOpen size={16} />
-        Scegli cartella…
+        Choose folder…
       </button>
       <div className="my-1.5 h-px bg-border" />
       <button
@@ -138,7 +138,7 @@ export function Sidebar() {
         className={`flex h-[34px] items-center justify-center gap-2 rounded-md border font-medium hover:border-ring ${section === "apps" ? "border-primary bg-primary-soft" : "border-border bg-bg"}`}
       >
         <Package size={16} />
-        App installate
+        Installed apps
       </button>
     </aside>
   );

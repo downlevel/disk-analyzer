@@ -8,11 +8,11 @@ export interface TypeInfo {
 
 export const TYPES: TypeInfo[] = [
   { key: "video", label: "Video", color: "var(--t-video)" },
-  { key: "img", label: "Immagini", color: "var(--t-img)" },
-  { key: "doc", label: "Documenti", color: "var(--t-doc)" },
-  { key: "code", label: "Codice", color: "var(--t-code)" },
-  { key: "arch", label: "Archivi", color: "var(--t-arch)" },
-  { key: "other", label: "Altro", color: "var(--t-other)" },
+  { key: "img", label: "Images", color: "var(--t-img)" },
+  { key: "doc", label: "Documents", color: "var(--t-doc)" },
+  { key: "code", label: "Code", color: "var(--t-code)" },
+  { key: "arch", label: "Archives", color: "var(--t-arch)" },
+  { key: "other", label: "Other", color: "var(--t-other)" },
 ];
 
 export const TYPE_MAP = Object.fromEntries(TYPES.map((t) => [t.key, t])) as Record<
@@ -21,17 +21,17 @@ export const TYPE_MAP = Object.fromEntries(TYPES.map((t) => [t.key, t])) as Reco
 >;
 
 export const TABS: { id: TabId; label: string }[] = [
-  { id: "tree", label: "Albero" },
+  { id: "tree", label: "Tree" },
   { id: "map", label: "Treemap" },
-  { id: "top", label: "Top file" },
-  { id: "types", label: "Tipi" },
+  { id: "top", label: "Top files" },
+  { id: "types", label: "Types" },
 ];
 
 export const TAB_HINTS: Record<TabId, string> = {
-  tree: "↑ ↓ per spostarti · ← → per comprimere/espandere · Maiusc+F10 per le azioni",
-  map: "Clic su una cartella per entrare · clic destro per le azioni",
-  top: "I 40 file più grandi della scansione",
-  types: "Clic su un tipo per filtrare i Top file",
+  tree: "↑ ↓ to move · ← → to collapse/expand · Shift+F10 for actions",
+  map: "Click a folder to enter it · right-click for actions",
+  top: "The 40 largest files in the scan",
+  types: "Click a type to filter Top files",
 };
 
 export const TREE_ROW_H = 32;

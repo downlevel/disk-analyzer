@@ -1,4 +1,4 @@
-export const fmtInt = (n: number): string => Math.round(n).toLocaleString("it-IT");
+export const fmtInt = (n: number): string => Math.round(n).toLocaleString("en-US");
 
 export function fmtSize(bytes: number): string {
   if (bytes < 1024) return `${Math.round(bytes)} B`;
@@ -9,15 +9,15 @@ export function fmtSize(bytes: number): string {
     v /= 1024;
     i++;
   }
-  return `${v.toLocaleString("it-IT", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} ${units[i]}`;
+  return `${v.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} ${units[i]}`;
 }
 
 export const fmtPct = (p: number): string =>
-  `${p.toLocaleString("it-IT", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %`;
+  `${p.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
 
-/** Percentuale di avanzamento, o "in corso" se non stimabile. */
+/** Progress percentage, or "in progress" if it can't be estimated. */
 export const fmtProgress = (p: number | null): string =>
-  p == null ? "in corso" : `${Math.floor(p * 100)} %`;
+  p == null ? "in progress" : `${Math.floor(p * 100)}%`;
 
 export function fmtDuration(ms: number): string {
   const s = Math.floor(ms / 1000);

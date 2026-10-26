@@ -1,46 +1,75 @@
 # Disk Analyzer
 
-App desktop per Windows 11 che scansiona un'unità o una cartella, in sola lettura, e mostra cosa
-occupa spazio: albero delle cartelle, treemap, file più grandi e ripartizione per tipo.
+A Windows 11 desktop app that scans a drive or folder (read-only) and shows what is taking up
+space: a folder tree, a treemap, the largest files, and a breakdown by file type.
 
-Tauri 2 + Rust (scansione) + React/TypeScript (interfaccia). Documentazione di progetto:
-[`PRD.md`](PRD.md), [`ARCHITECTURE.md`](ARCHITECTURE.md), [`DESIGN.md`](DESIGN.md), [`TASKS.md`](TASKS.md).
+Built with [Tauri 2](https://tauri.app/): a Rust core does the scanning, and a React + TypeScript
+interface (styled with Tailwind CSS) displays the results.
 
-Oltre ai dischi, la sezione **App installate** (nella sidebar) elenca le app desktop di Windows e
-misura quanto pesano le loro cartelle.
+## Features
 
-## Prerequisiti
+- **Read-only scanning** of whole drives or any folder, with live progress and cancellation.
+- **Tree view** with lazily loaded folders, sorting by name, size, size on disk or file count, and a
+  context menu (open in File Explorer, copy path, show in treemap).
+- **Treemap** to drill down into the biggest folders at a glance.
+- **Top files**: the 40 largest files of the scan, filterable by type.
+- **Types**: breakdown of space by file type and extension.
+- **Installed apps**: lists the Windows desktop apps and measures how much space their folders use.
+- Light and dark themes, recent folders, keyboard navigation.
 
-- Node.js 20+ e npm
-- Rust (toolchain MSVC) e i Visual Studio Build Tools con il workload "Sviluppo desktop con C++"
-- WebView2 (già presente su Windows 11)
+## Download
 
-## Comandi
+Prebuilt installers are published on the
+[GitHub Releases](../../releases) page of this repository.
 
-| Comando                  | Cosa fa                                                         |
-| ------------------------ | --------------------------------------------------------------- |
-| `npm install`            | Installa le dipendenze del frontend                             |
-| `npm run tauri dev`      | Avvia l'app in sviluppo (ricarica a ogni modifica)              |
-| `npm run tauri build`    | Compila l'app e crea l'installer in `src-tauri/target/release/bundle` |
-| `npm test`               | Test del frontend (Vitest)                                      |
-| `cargo test`             | Test del core Rust, da `src-tauri/`; rigenera anche `src/bindings` |
-| `npm run lint`           | ESLint                                                          |
-| `npm run format:check`   | Prettier (usa `npm run format` per correggere)                  |
-| `cargo clippy --all-targets` | Lint del core Rust, da `src-tauri/`                         |
+## Tech stack
 
-Il frontend funziona solo dentro Tauri: le scansioni e i dati arrivano dal core Rust, non c'è una
-modalità solo-browser.
+- **Core:** Rust, Tauri 2, [`ts-rs`](https://github.com/Aleph-Alpha/ts-rs) (generates the shared TypeScript types)
+- **Frontend:** React 19, TypeScript, Vite, Tailwind CSS 4, Zustand, lucide-react
+- **Tests and tooling:** Vitest, ESLint, Prettier, Clippy
 
-## Note
+## Prerequisites
 
-- **Compilazione:** `src-tauri/.cargo/config.toml` limita Cargo a 3 job paralleli. Senza, su PC con
-  poca RAM libera `rustc` può terminare con `out of memory` (succedeva su `tokio`). Gli errori
-  `memory allocation … failed` e, a catena, `only metadata stub found for rlib dependency core`
-  indicano esaurimento del *commit* di Windows (non solo della RAM). Se capita ancora, chiudi
-  programmi pesanti e usa `CARGO_BUILD_JOBS=1` (più lento: da zero circa 10 minuti, picco ~2 GB per
-  compilatore). Le dipendenze si compilano senza informazioni di debug (`Cargo.toml`).
-- **Tipi condivisi:** i tipi in `src/bindings/` sono generati da `ts-rs` a partire da
-  `src-tauri/src/model.rs`; non vanno modificati a mano. Se cambi il modello Rust, esegui `cargo test`.
-- **Log:** `%LOCALAPPDATA%\com.personal.diskanalyzer\logs\`. Il livello si cambia con la variabile
-  d'ambiente `RUST_LOG` (es. `RUST_LOG=debug`).
-- **Icona:** il sorgente è `design/icon.svg`; si rigenerano i formati con `npx tauri icon <png 1024>`.
+- Node.js 20+ and npm
+- Rust (MSVC toolchain) and the Visual Studio Build Tools with the "Desktop development with C++" workload
+- WebView2 (already present on Windows 11)
+
+## Getting started
+
+```bash
+npm install
+npm run tauri dev
+```
+
+The frontend only works inside Tauri: scans and data come from the Rust core, so there is no
+browser-only mode.
+
+## Commands
+
+| Command                      | What it does                                                              |
+| ---------------------------- | ------------------------------------------------------------------------- |
+| `npm install`                | Installs the frontend dependencies                                        |
+| `npm run tauri dev`          | Runs the app in development (reloads on change)                           |
+| `npm run tauri build`        | Builds the app and creates the installer in `src-tauri/target/release/bundle` |
+| `npm test`                   | Frontend tests (Vitest)                                                   |
+| `cargo test`                 | Rust core tests, from `src-tauri/`; also regenerates `src/bindings`       |
+| `npm run lint`               | ESLint                                                                    |
+| `npm run format:check`       | Prettier (use `npm run format` to fix)                                    |
+| `cargo clippy --all-targets` | Rust core lint, from `src-tauri/`                                         |
+
+## Notes
+
+- **Build memory:** on machines with little free RAM, `rustc` can fail with `out of memory` (seen
+  on `tokio`). The errors `memory allocation … failed` and, as a consequence,
+  `only metadata stub found for rlib dependency core` indicate that the Windows _commit_ limit is
+  exhausted (not just RAM). Limit parallelism with `CARGO_BUILD_JOBS=3` (or `1` if it still
+  fails; slower, roughly 10 minutes from scratch, ~2 GB peak per compiler). Dependencies are built
+  without debug info (see `Cargo.toml`).
+- **Shared types:** the types in `src/bindings/` are generated by `ts-rs` from
+  `src-tauri/src/model.rs`; do not edit them by hand. If you change the Rust model, run `cargo test`.
+- **Logs:** `%LOCALAPPDATA%\com.personal.diskanalyzer\logs\`. Change the level with the `RUST_LOG`
+  environment variable (e.g. `RUST_LOG=debug`).
+
+## License
+
+[MIT](LICENSE)

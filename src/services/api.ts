@@ -1,4 +1,4 @@
-// Chiamate ai comandi Tauri (src-tauri/src/commands.rs).
+// Calls to the Tauri commands (src-tauri/src/commands.rs).
 import { invoke } from "@tauri-apps/api/core";
 import type { ChildrenOf } from "../bindings/ChildrenOf";
 import type { Drive } from "../bindings/Drive";
@@ -10,7 +10,7 @@ import type { TypeStats } from "../bindings/TypeStats";
 export const api = {
   listDrives: () => invoke<Drive[]>("list_drives"),
 
-  /** Figli di più nodi in un'unica chiamata, ciascuno dal più grande. */
+  /** Children of several nodes in a single call, each from the largest. */
   getChildren: (scanId: number, ids: number[]) =>
     invoke<ChildrenOf[]>("get_children", { scanId, ids }),
 
@@ -20,23 +20,23 @@ export const api = {
   getTypeStats: (scanId: number, extLimit: number) =>
     invoke<TypeStats>("get_type_stats", { scanId, extLimit }),
 
-  /** Catena di antenati dalla radice al nodo (incluso). */
+  /** Chain of ancestors from the root to the node (inclusive). */
   getAncestors: (scanId: number, id: number) => invoke<number[]>("get_ancestors", { scanId, id }),
 
   getDenied: (scanId: number, limit: number) => invoke<Node[]>("get_denied", { scanId, limit }),
 
   openInExplorer: (path: string) => invoke<void>("open_in_explorer", { path }),
 
-  /** App desktop installate, dal registro di Windows. */
+  /** Installed desktop apps, from the Windows registry. */
   listInstalledApps: () => invoke<InstalledApp[]>("list_installed_apps"),
 
-  /** Avvia la misura delle cartelle delle app (tutte se `ids` è vuoto); i risultati arrivano come eventi. */
+  /** Starts measuring the apps' folders (all if `ids` is empty); results arrive as events. */
   measureAppSizes: (ids: string[]) => invoke<void>("measure_app_sizes", { ids }),
 
   cancelAppSizes: () => invoke<boolean>("cancel_app_sizes"),
 };
 
-/** Finestra di sistema per scegliere una cartella; `null` se l'utente annulla. */
+/** System dialog to choose a folder; `null` if the user cancels. */
 export async function pickFolder(): Promise<string | null> {
   const { open } = await import("@tauri-apps/plugin-dialog");
   const selected = await open({ directory: true, multiple: false });

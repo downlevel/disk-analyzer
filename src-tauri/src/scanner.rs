@@ -1,7 +1,7 @@
-//! Scansione del filesystem (sola lettura).
+//! Filesystem scan (read-only).
 //!
-//! Percorre l'albero in parallelo (rayon), salta symlink e junction, calcola dimensione logica
-//! e su disco e costruisce l'albero dei risultati ([`ScanTree`]).
+//! Walks the tree in parallel (rayon), skips symlinks and junctions, computes logical size
+//! and size on disk, and builds the results tree ([`ScanTree`]).
 
 use std::collections::HashMap;
 use std::fs;
@@ -20,12 +20,12 @@ use crate::model::FileType;
 use crate::sys::DEFAULT_CLUSTER_SIZE;
 use crate::tree::{Agg, DirNode, ExtTotal, FileNode, ScanTree};
 
-/// Intervallo tra due notifiche di avanzamento.
+/// Interval between two progress notifications.
 const PROGRESS_INTERVAL: Duration = Duration::from_millis(100);
-/// Ogni quanti file di una stessa cartella si aggiornano i contatori globali.
+/// How many files of the same folder between updates of the global counters.
 const PROGRESS_FLUSH_EVERY: usize = 2048;
 
-// Attributi Windows dei file "solo nel cloud" (es. OneDrive): non occupano spazio su disco.
+// Windows attributes of "cloud-only" files (e.g. OneDrive): they take no space on disk.
 const FILE_ATTRIBUTE_OFFLINE: u32 = 0x1000;
 const FILE_ATTRIBUTE_RECALL_ON_OPEN: u32 = 0x40000;
 const FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS: u32 = 0x400000;
@@ -34,9 +34,9 @@ const CLOUD_ONLY_ATTRIBUTES: u32 =
 
 #[derive(Debug, Clone)]
 pub struct ScanOptions {
-    /// Dimensione del cluster del volume, per calcolare lo spazio occupato su disco.
+    /// Cluster size of the volume, used to compute the space taken on disk.
     pub cluster_size: u64,
-    /// File da conservare singolarmente per ogni cartella; gli altri vengono aggregati.
+    /// Files to keep individually for each folder; the others are aggregated.
     pub keep_files_per_dir: usize,
     pub threads: usize,
 }
@@ -51,7 +51,7 @@ impl Default for ScanOptions {
     }
 }
 
-/// Contatori letti durante la scansione per l'avanzamento.
+/// Counters read during the scan to report progress.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Snapshot {
     pub files: u64,
@@ -66,7 +66,7 @@ pub enum Outcome {
         tree: ScanTree,
         totals: Snapshot,
     },
-    /// Interrotta dall'utente; i totali riguardano quanto analizzato fino a quel momento.
+    /// Interrupted by the user; the totals cover what was analyzed up to that point.
     Cancelled(Snapshot),
 }
 
@@ -92,7 +92,7 @@ struct Counters {
     dirs: AtomicU64,
     bytes: AtomicU64,
     denied: AtomicU64,
-    /// Cartelle lette finora (la radice compresa), per limitare gli aggiornamenti del percorso.
+    /// Folders read so far (root included), to throttle path updates.
     visited: AtomicU64,
 }
 
@@ -122,8 +122,8 @@ impl Ctx<'_> {
     }
 }
 
-/// Spazio occupato su disco: dimensione arrotondata ai cluster. I file presenti solo nel cloud
-/// non occupano spazio.
+/// Space taken on disk: size rounded up to clusters. Cloud-only files
+/// take no space.
 fn disk_size(attributes: u32, size: u64, cluster: u64) -> u64 {
     if size == 0 || attributes & CLOUD_ONLY_ATTRIBUTES != 0 {
         return 0;
@@ -140,13 +140,13 @@ fn scan_dir(path: &Path, name: String, ctx: &Ctx) -> DirNode {
     let entries = match fs::read_dir(path) {
         Ok(entries) => entries,
         Err(e) if e.kind() == io::ErrorKind::PermissionDenied => {
-            debug!(path = %path.display(), "cartella non accessibile");
+            debug!(path = %path.display(), "folder not accessible");
             node.denied = true;
             ctx.counters.denied.fetch_add(1, Ordering::Relaxed);
             return node;
         }
         Err(e) => {
-            warn!(path = %path.display(), error = %e, "cartella non leggibile");
+            warn!(path = %path.display(), error = %e, "folder not readable");
             return node;
         }
     };
@@ -156,15 +156,15 @@ fn scan_dir(path: &Path, name: String, ctx: &Ctx) -> DirNode {
     let mut subdirs: Vec<(PathBuf, String)> = Vec::new();
     let mut local_exts: HashMap<String, ExtAcc> = HashMap::new();
     let mut bytes = 0u64;
-    // File e byte già riportati ai contatori globali: nelle cartelle molto grandi li si
-    // aggiorna a blocchi, così l'avanzamento procede e l'annullamento è reattivo.
+    // Files and bytes already reported to the global counters: in very large folders they
+    // are updated in blocks, so progress keeps moving and cancellation stays responsive.
     let (mut reported_files, mut reported_bytes) = (0u64, 0u64);
 
     for entry in entries.flatten() {
         let Ok(file_type) = entry.file_type() else {
             continue;
         };
-        // Symlink e junction non vengono seguiti: evitano cicli e doppi conteggi.
+        // Symlinks and junctions are not followed: avoids cycles and double counting.
         if file_type.is_symlink() {
             continue;
         }
@@ -223,7 +223,7 @@ fn scan_dir(path: &Path, name: String, ctx: &Ctx) -> DirNode {
     ctx.counters
         .dirs
         .fetch_add(subdirs.len() as u64, Ordering::Relaxed);
-    // Aggiorna il percorso mostrato solo ogni tanto, per non contendere il lock tra i thread.
+    // Update the displayed path only now and then, to avoid lock contention between threads.
     let visited = ctx.counters.visited.fetch_add(1, Ordering::Relaxed);
     if visited.is_multiple_of(8)
         && let Ok(mut current) = ctx.current.try_lock()
@@ -239,7 +239,7 @@ fn scan_dir(path: &Path, name: String, ctx: &Ctx) -> DirNode {
         }
     }
 
-    // Conserva i file più grandi, aggrega il resto.
+    // Keep the largest files, aggregate the rest.
     let keep = ctx.opts.keep_files_per_dir;
     if files.len() > keep {
         files.sort_unstable_by_key(|f| std::cmp::Reverse(f.size));
@@ -286,7 +286,7 @@ fn scan_dir(path: &Path, name: String, ctx: &Ctx) -> DirNode {
     node
 }
 
-/// Normalizza la radice: senza backslash finale, tranne per la radice di un'unità (`C:\`).
+/// Normalizes the root: no trailing backslash, except for a drive root (`C:\`).
 fn root_label(root: &Path) -> String {
     let s = root.display().to_string();
     if s.len() > 3 {
@@ -296,8 +296,8 @@ fn root_label(root: &Path) -> String {
     }
 }
 
-/// Percorre `root` e ne costruisce l'albero. `on_progress` viene chiamata da un thread dedicato
-/// ogni [`PROGRESS_INTERVAL`]. Impostando `cancel` la scansione si ferma.
+/// Walks `root` and builds its tree. `on_progress` is called from a dedicated thread
+/// every [`PROGRESS_INTERVAL`]. Setting `cancel` stops the scan.
 pub fn scan(
     root: &Path,
     opts: &ScanOptions,
@@ -307,7 +307,7 @@ pub fn scan(
     if !fs::metadata(root).map_err(classify)?.is_dir() {
         return Err(ScanError::NotADirectory);
     }
-    // Se la radice non è leggibile è un errore della scansione, non una cartella "negata".
+    // If the root is not readable it is a scan error, not a "denied" folder.
     fs::read_dir(root).map_err(classify)?;
 
     let pool = rayon::ThreadPoolBuilder::new()
@@ -358,7 +358,7 @@ pub fn scan(
         .map(|(ext, acc)| {
             let ftype: FileType = type_for_ext(ext.trim_start_matches('.'));
             let ext = if ext.is_empty() {
-                "(nessuna)".to_string()
+                "(none)".to_string()
             } else {
                 ext
             };
@@ -398,20 +398,20 @@ mod tests {
     fn run(root: &Path, opts: &ScanOptions) -> (ScanTree, Snapshot) {
         match scan(root, opts, &never(), |_| {}).unwrap() {
             Outcome::Completed { tree, totals } => (tree, totals),
-            Outcome::Cancelled(_) => panic!("attesa scansione completata"),
+            Outcome::Cancelled(_) => panic!("expected a completed scan"),
         }
     }
 
     /// root/
     ///   a/ (f1.mp4: 10 B, f2.txt: 5 B)
     ///   b/c/ (f3.bin: 100 B)
-    ///   vuota/
+    ///   empty/
     fn sample_tree() -> tempfile::TempDir {
         let dir = tempdir().unwrap();
         let root = dir.path();
         create_dir_all(root.join("a")).unwrap();
         create_dir_all(root.join("b").join("c")).unwrap();
-        create_dir_all(root.join("vuota")).unwrap();
+        create_dir_all(root.join("empty")).unwrap();
         write(root.join("a").join("f1.mp4"), [0u8; 10]).unwrap();
         write(root.join("a").join("f2.txt"), [0u8; 5]).unwrap();
         write(root.join("b").join("c").join("f3.bin"), [0u8; 100]).unwrap();
@@ -419,7 +419,7 @@ mod tests {
     }
 
     #[test]
-    fn conta_file_cartelle_e_byte() {
+    fn counts_files_folders_and_bytes() {
         let dir = sample_tree();
         let (tree, totals) = run(dir.path(), &opts());
         assert_eq!((totals.files, totals.dirs, totals.bytes), (3, 4, 115));
@@ -430,12 +430,12 @@ mod tests {
         assert_eq!(root.parent_id, None);
     }
 
-    /// Oltre `PROGRESS_FLUSH_EVERY` file in una cartella i contatori vengono aggiornati a blocchi:
-    /// i totali non devono né perdere né duplicare elementi.
+    /// Beyond `PROGRESS_FLUSH_EVERY` files in a folder the counters are updated in blocks:
+    /// the totals must neither lose nor duplicate items.
     #[test]
-    fn totali_esatti_con_cartelle_grandi() {
+    fn exact_totals_with_large_folders() {
         let dir = tempdir().unwrap();
-        let n = PROGRESS_FLUSH_EVERY * 2 + 123; // attraversa due aggiornamenti a blocchi
+        let n = PROGRESS_FLUSH_EVERY * 2 + 123; // crosses two block updates
         for i in 0..n {
             write(dir.path().join(format!("f{i}.dat")), [0u8; 3]).unwrap();
         }
@@ -446,18 +446,18 @@ mod tests {
         let root = tree.get(0).unwrap();
         assert_eq!(root.files, n as u64);
         assert_eq!(root.size, 3 * n as u64);
-        // Conservati i primi 50, gli altri aggregati.
+        // The first 50 are kept, the others aggregated.
         let kids = tree.children(0, 1000);
         assert_eq!(kids.len(), 51);
         assert_eq!(kids.last().unwrap().files, n as u64 - 50);
     }
 
     #[test]
-    fn dimensione_su_disco_arrotondata_ai_cluster() {
+    fn size_on_disk_rounded_to_clusters() {
         let dir = sample_tree();
         let (tree, _) = run(dir.path(), &opts());
         let root = tree.get(0).unwrap();
-        // 3 file non vuoti: ciascuno occupa un cluster da 4096 B.
+        // 3 non-empty files: each takes one 4096 B cluster.
         assert_eq!(root.disk, 3 * 4096);
         assert_eq!(disk_size(0, 0, 4096), 0);
         assert_eq!(disk_size(0, 4096, 4096), 4096);
@@ -469,13 +469,13 @@ mod tests {
     }
 
     #[test]
-    fn figli_ordinati_per_dimensione_e_percorsi() {
+    fn children_sorted_by_size_with_paths() {
         let dir = sample_tree();
         let (tree, _) = run(dir.path(), &opts());
         let children = tree.children(0, 100);
         let names: Vec<_> = children.iter().map(|n| n.name.as_str()).collect();
-        // b (100 B) > a (15 B) > vuota (0 B)
-        assert_eq!(names, ["b", "a", "vuota"]);
+        // b (100 B) > a (15 B) > empty (0 B)
+        assert_eq!(names, ["b", "a", "empty"]);
 
         let b = &children[0];
         assert_eq!(b.path, format!("{}\\b", root_label(dir.path())));
@@ -491,7 +491,7 @@ mod tests {
     }
 
     #[test]
-    fn aggrega_i_file_oltre_il_limite() {
+    fn aggregates_files_beyond_the_limit() {
         let dir = tempdir().unwrap();
         for i in 0..10u8 {
             write(
@@ -508,22 +508,22 @@ mod tests {
         assert_eq!(totals.files, 10);
 
         let kids = tree.children(0, 100);
-        assert_eq!(kids.len(), 4); // 3 file + il nodo aggregato
+        assert_eq!(kids.len(), 4); // 3 files + the aggregate node
         let agg = kids.last().unwrap();
         assert_eq!(agg.kind, NodeKind::Agg);
         assert_eq!(agg.files, 7);
         assert_eq!(agg.path, root_label(dir.path()));
-        // I tre più grandi (19, 18, 17 B) restano; gli altri 7 (10..=16 B) sono aggregati.
+        // The three largest (19, 18, 17 B) stay; the other 7 (10..=16 B) are aggregated.
         assert_eq!(kids[0].size, 19);
         assert_eq!(agg.size, (10..=16).sum::<u64>());
-        // I totali della cartella comprendono anche i file aggregati.
+        // The folder totals also include the aggregated files.
         let root = tree.get(0).unwrap();
         assert_eq!(root.files, 10);
         assert_eq!(root.size, (10..=19).sum::<u64>());
     }
 
     #[test]
-    fn il_limite_sui_figli_conserva_il_nodo_aggregato() {
+    fn the_children_limit_keeps_the_aggregate_node() {
         let dir = tempdir().unwrap();
         for i in 0..6u8 {
             write(
@@ -543,12 +543,12 @@ mod tests {
     }
 
     #[test]
-    fn statistiche_per_tipo_e_per_estensione() {
+    fn stats_by_type_and_by_extension() {
         let dir = sample_tree();
         let o = ScanOptions {
             keep_files_per_dir: 1,
             ..opts()
-        }; // forza l'aggregazione in a/
+        }; // forces aggregation in a/
         let (tree, _) = run(dir.path(), &o);
         let stats = tree.type_stats(10);
         assert_eq!((stats.total_size, stats.total_files), (115, 3));
@@ -558,7 +558,7 @@ mod tests {
         assert_eq!(size_of(FileType::Doc), 5);
         assert_eq!(size_of(FileType::Other), 100);
 
-        // Le estensioni comprendono anche i file aggregati, dalla più grande.
+        // Extensions also include aggregated files, largest first.
         let exts: Vec<_> = stats
             .exts
             .iter()
@@ -569,7 +569,7 @@ mod tests {
     }
 
     #[test]
-    fn file_piu_grandi_con_filtro_per_tipo() {
+    fn largest_files_with_type_filter() {
         let dir = sample_tree();
         let (tree, _) = run(dir.path(), &opts());
         let all = tree.top_files(None, 10);
@@ -583,12 +583,12 @@ mod tests {
     }
 
     #[test]
-    fn catena_degli_antenati() {
+    fn chain_of_ancestors() {
         let dir = sample_tree();
         let (tree, _) = run(dir.path(), &opts());
         let f3 = tree.top_files(None, 1).remove(0);
         let chain = tree.ancestors(f3.id);
-        assert_eq!(chain.len(), 4); // radice, b, c, f3
+        assert_eq!(chain.len(), 4); // root, b, c, f3
         assert_eq!(chain[0], 0);
         assert_eq!(*chain.last().unwrap(), f3.id);
         assert!(tree.ancestors(9_999_999).is_empty());
@@ -596,20 +596,20 @@ mod tests {
     }
 
     #[test]
-    fn annullata_prima_di_iniziare() {
+    fn cancelled_before_starting() {
         let dir = sample_tree();
         let cancel = AtomicBool::new(true);
         let outcome = scan(dir.path(), &opts(), &cancel, |_| {}).unwrap();
         let Outcome::Cancelled(t) = outcome else {
-            panic!("attesa scansione annullata");
+            panic!("expected a cancelled scan");
         };
         assert_eq!(t.files, 0);
     }
 
     #[test]
-    fn percorso_inesistente() {
+    fn nonexistent_path() {
         let dir = tempdir().unwrap();
-        let missing = dir.path().join("non-esiste");
+        let missing = dir.path().join("does-not-exist");
         assert!(matches!(
             scan(&missing, &opts(), &never(), |_| {}),
             Err(ScanError::NotFound)
@@ -617,7 +617,7 @@ mod tests {
     }
 
     #[test]
-    fn percorso_che_non_e_una_cartella() {
+    fn path_that_is_not_a_folder() {
         let dir = tempdir().unwrap();
         let file = dir.path().join("file.txt");
         write(&file, b"x").unwrap();
@@ -627,18 +627,18 @@ mod tests {
         ));
     }
 
-    /// La junction punta a `a/`: se venisse seguita i file di `a/` sarebbero contati due volte.
+    /// The junction points to `a/`: if it were followed, the files of `a/` would be counted twice.
     #[test]
-    fn junction_non_seguita() {
+    fn junction_not_followed() {
         let dir = sample_tree();
-        let link = dir.path().join("collegamento");
+        let link = dir.path().join("link");
         let status = std::process::Command::new("cmd")
             .args(["/C", "mklink", "/J"])
             .arg(&link)
             .arg(dir.path().join("a"))
             .output()
             .unwrap();
-        assert!(status.status.success(), "mklink /J fallito");
+        assert!(status.status.success(), "mklink /J failed");
 
         let (_, totals) = run(dir.path(), &opts());
         assert_eq!((totals.files, totals.bytes), (3, 115));

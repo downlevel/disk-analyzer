@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* Font (da design/Disk Analyzer.html): Inter e JetBrains Mono, variabili, solo sottoinsiemi latini. */
+/* Fonts: Inter and JetBrains Mono, variable, Latin subsets only. */
 @font-face {
   font-family: "Inter";
   font-style: normal;
@@ -44,7 +44,7 @@
     U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
-/* Token di design (tema chiaro). */
+/* Design tokens (light theme). */
 :root {
   --bg: oklch(1 0 0);
   --fg: oklch(0.21 0.01 265);
@@ -76,7 +76,7 @@
   --t-ink: oklch(0.2 0.01 265);
 }
 
-/* Tema scuro: segue il sistema. */
+/* Dark theme: follows the system. */
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: oklch(0.185 0.005 265);
@@ -151,8 +151,8 @@ body {
   cursor: default;
 }
 
-/* Font e colore dei pulsanti li eredita già il preflight di Tailwind (layer base): ridichiararli
-   qui, fuori dai layer, avrebbe la precedenza sulle utility come `text-primary-fg`. */
+/* Button font and color are already inherited from Tailwind's preflight (base layer): redeclaring
+   them here, outside the layers, would take precedence over utilities like `text-primary-fg`. */
 button {
   cursor: pointer;
 }

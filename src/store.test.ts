@@ -55,19 +55,19 @@ function node(partial: Partial<Node> & { id: number }): Node {
 
 /**
  * C:\ (0)
- * ├─ grande (1, 100 B) ── interno (3, 80 B) ── foglia (5, 80 B, file)
- * ├─ piccola (2, 10 B)
- * └─ vuota (4, 0 B)
+ * ├─ big (1, 100 B) ── inner (3, 80 B) ── leaf (5, 80 B, file)
+ * ├─ small (2, 10 B)
+ * └─ empty (4, 0 B)
  */
 const TREE: Record<number, Node[]> = {
   0: [
-    node({ id: 1, parentId: 0, name: "grande", size: 100, childCount: 1 }),
-    node({ id: 2, parentId: 0, name: "piccola", size: 10, childCount: 1 }),
-    node({ id: 4, parentId: 0, name: "vuota" }),
+    node({ id: 1, parentId: 0, name: "big", size: 100, childCount: 1 }),
+    node({ id: 2, parentId: 0, name: "small", size: 10, childCount: 1 }),
+    node({ id: 4, parentId: 0, name: "empty" }),
   ],
-  1: [node({ id: 3, parentId: 1, name: "interno", size: 80, childCount: 1 })],
+  1: [node({ id: 3, parentId: 1, name: "inner", size: 80, childCount: 1 })],
   2: [node({ id: 6, parentId: 2, name: "x.txt", kind: "file", size: 10 })],
-  3: [node({ id: 5, parentId: 3, name: "foglia.bin", kind: "file", size: 80 })],
+  3: [node({ id: 5, parentId: 3, name: "leaf.bin", kind: "file", size: 80 })],
 };
 
 const done = (scanId: number, extra: Partial<ScanDone> = {}): ScanDone => ({
@@ -110,9 +110,9 @@ beforeEach(() => {
   mocks.api.openInExplorer.mockResolvedValue(undefined);
 });
 
-/** Avvia una scansione e ne simula il completamento. */
+/** Starts a scan and simulates its completion. */
 async function scanToResults(scanId = 1) {
-  state().startScan({ path: "C:\\Dati" });
+  state().startScan({ path: "C:\\Data" });
   handlers.onDone(done(scanId));
   await vi.waitFor(() => expect(state().screen).toBe("results"));
 }
@@ -149,31 +149,31 @@ const measureDone = (partial: Partial<AppsMeasureDone> = {}): AppsMeasureDone =>
   ...partial,
 });
 
-describe("app installate", () => {
+describe("installed apps", () => {
   const APPS = [
     installed("git", { estimatedSize: 300 }),
     installed("nvm", { estimatedSize: 20 }),
-    installed("senza-cartella", { installLocation: null, estimatedSize: 50 }),
+    installed("no-folder", { installLocation: null, estimatedSize: 50 }),
   ];
 
   beforeEach(() => {
     mocks.api.listInstalledApps.mockResolvedValue(APPS);
   });
 
-  it("aprendo la sezione carica l'elenco e avvia la misura delle cartelle", async () => {
+  it("opening the section loads the list and starts measuring the folders", async () => {
     state().setSection("apps");
     expect(state().section).toBe("apps");
     await vi.waitFor(() => expect(mocks.api.measureAppSizes).toHaveBeenCalledWith([]));
 
     expect(state().apps).toEqual(APPS);
     expect(state().appsMeasuring).toBe(true);
-    // Si misurano solo le app che dichiarano la cartella.
+    // Only apps that declare a folder are measured.
     expect(state().appsProgress).toEqual({ done: 0, total: 2 });
-    // Ordine iniziale: per dimensione stimata.
-    expect(state().appSortBasis).toEqual({ git: 300, nvm: 20, "senza-cartella": 50 });
+    // Initial order: by estimated size.
+    expect(state().appSortBasis).toEqual({ git: 300, nvm: 20, "no-folder": 50 });
   });
 
-  it("non ricarica l'elenco ogni volta che si riapre la sezione", async () => {
+  it("does not reload the list every time the section is reopened", async () => {
     state().setSection("apps");
     await vi.waitFor(() => expect(state().apps).not.toBeNull());
     state().setSection("disk");
@@ -182,7 +182,7 @@ describe("app installate", () => {
     expect(mocks.api.listInstalledApps).toHaveBeenCalledTimes(1);
   });
 
-  it("registra i risultati man mano, avanza il progresso e a fine misura riordina", async () => {
+  it("records results as they arrive, advances progress and re-sorts when measuring ends", async () => {
     state().setSection("apps");
     await vi.waitFor(() => expect(state().appsMeasuring).toBe(true));
     const orderBefore = { ...state().appSortBasis };
@@ -190,26 +190,26 @@ describe("app installate", () => {
     appHandlers.onSize(appSize("nvm", 9000));
     expect(state().appSizes.nvm.size).toBe(9000);
     expect(state().appsProgress.done).toBe(1);
-    // Durante la misura l'ordine non cambia: le righe non saltano.
+    // While measuring, the order does not change: rows don't jump around.
     expect(state().appSortBasis).toEqual(orderBefore);
 
     appHandlers.onSize(appSize("git", 100));
     appHandlers.onDone(measureDone());
     expect(state().appsMeasuring).toBe(false);
-    expect(state().appSortBasis).toMatchObject({ nvm: 9000, git: 100, "senza-cartella": 50 });
+    expect(state().appSortBasis).toMatchObject({ nvm: 9000, git: 100, "no-folder": 50 });
   });
 
-  it("l'annullamento di una misura superata da una nuova non ferma quella nuova", async () => {
+  it("cancelling a measurement superseded by a new one does not stop the new one", async () => {
     state().setSection("apps");
     await vi.waitFor(() => expect(state().appsMeasuring).toBe(true));
     appHandlers.onDone(measureDone({ cancelled: true, measured: 1 }));
     expect(state().appsMeasuring).toBe(true);
-    // Un annullamento senza app da misurare (avvio fallito) invece chiude.
+    // A cancellation with no apps to measure (failed start) closes instead.
     appHandlers.onDone(measureDone({ cancelled: true, measured: 0, total: 0 }));
     expect(state().appsMeasuring).toBe(false);
   });
 
-  it("annullando ferma la misura e riordina con quanto misurato", async () => {
+  it("cancelling stops the measurement and re-sorts with what was measured", async () => {
     state().setSection("apps");
     await vi.waitFor(() => expect(state().appsMeasuring).toBe(true));
     appHandlers.onSize(appSize("nvm", 9000));
@@ -219,38 +219,38 @@ describe("app installate", () => {
     expect(state().appSortBasis.nvm).toBe(9000);
   });
 
-  it("cambiando ordinamento la base si ricalcola sulle misure correnti", async () => {
+  it("changing the sort recomputes the basis from the current measurements", async () => {
     state().setSection("apps");
     await vi.waitFor(() => expect(state().appsMeasuring).toBe(true));
     appHandlers.onSize(appSize("nvm", 9000));
-    state().setAppSort("size", -1); // stessa colonna: inverte la direzione
+    state().setAppSort("size", -1); // same column: reverses the direction
     expect(state().appSort).toEqual({ key: "size", dir: 1 });
     expect(state().appSortBasis.nvm).toBe(9000);
     state().setAppSort("name", 1);
     expect(state().appSort).toEqual({ key: "name", dir: 1 });
   });
 
-  it("un errore nella lettura delle app non lascia la sezione in caricamento", async () => {
+  it("an error reading the apps does not leave the section loading", async () => {
     mocks.api.listInstalledApps.mockRejectedValue(new Error("boom"));
     state().setSection("apps");
-    await vi.waitFor(() => expect(state().toast).toContain("Elenco app"));
+    await vi.waitFor(() => expect(state().toast).toContain("Listing apps"));
     expect(state().appsLoading).toBe(false);
     expect(state().apps).toEqual([]);
     expect(mocks.api.measureAppSizes).not.toHaveBeenCalled();
   });
 
-  it("un errore nell'avvio della misura la chiude e permette di riprovare", async () => {
+  it("an error starting the measurement closes it and allows retrying", async () => {
     mocks.api.measureAppSizes.mockRejectedValueOnce(new Error("boom"));
     state().setSection("apps");
-    await vi.waitFor(() => expect(state().toast).toContain("Misura delle app"));
+    await vi.waitFor(() => expect(state().toast).toContain("Measuring apps"));
     expect(state().appsMeasuring).toBe(false);
     await state().measureApps();
     expect(state().appsMeasuring).toBe(true);
-    // Dopo l'errore ci si registra di nuovo agli eventi.
+    // After the error, the events are registered again.
     expect(mocks.listenAppSizes).toHaveBeenCalled();
   });
 
-  it("senza app con cartella nota non si avvia nessuna misura", async () => {
+  it("with no app that has a known folder, no measurement starts", async () => {
     mocks.api.listInstalledApps.mockResolvedValue([installed("x", { installLocation: null })]);
     state().setSection("apps");
     await vi.waitFor(() => expect(state().apps).toHaveLength(1));
@@ -259,7 +259,7 @@ describe("app installate", () => {
     expect(state().appsMeasuring).toBe(false);
   });
 
-  it("analizzare un'app avvia la scansione della sua cartella e torna ai dischi", async () => {
+  it("analyzing an app scans its folder and goes back to the disks", async () => {
     state().setSection("apps");
     await vi.waitFor(() => expect(state().apps).not.toBeNull());
     state().analyzeApp(APPS[0]);
@@ -268,11 +268,11 @@ describe("app installate", () => {
     expect(state().screen).toBe("scanning");
 
     mocks.start.mockClear();
-    state().analyzeApp(APPS[2]); // nessuna cartella: non fa nulla
+    state().analyzeApp(APPS[2]); // no folder: does nothing
     expect(mocks.start).not.toHaveBeenCalled();
   });
 
-  it("apre la cartella in Esplora risorse e ne copia il percorso", async () => {
+  it("opens the folder in File Explorer and copies its path", async () => {
     mocks.api.openInExplorer.mockResolvedValue(undefined);
     state().openAppFolder(APPS[0]);
     expect(mocks.api.openInExplorer).toHaveBeenCalledWith("C:\\Program Files\\git");
@@ -289,8 +289,8 @@ describe("app installate", () => {
   });
 });
 
-describe("elenco delle unità", () => {
-  it("lo spazio libero viene riletto a ogni scansione, all'inizio e alla fine", async () => {
+describe("drive list", () => {
+  it("free space is re-read on every scan, at the start and at the end", async () => {
     mocks.api.listDrives.mockResolvedValueOnce([
       { key: "C", letter: "C:", name: "OSDisk", kind: "NTFS", path: "C:\\", total: 100, used: 90 },
     ]);
@@ -298,11 +298,11 @@ describe("elenco delle unità", () => {
     expect(state().drives[0].used).toBe(90);
     mocks.api.listDrives.mockClear();
 
-    // Nel frattempo l'utente ha cancellato dei file: lo spazio occupato scende a 60.
+    // Meanwhile the user deleted some files: used space drops to 60.
     mocks.api.listDrives.mockResolvedValue([
       { key: "C", letter: "C:", name: "OSDisk", kind: "NTFS", path: "C:\\", total: 100, used: 60 },
     ]);
-    state().startScan({ path: "C:\\Dati" });
+    state().startScan({ path: "C:\\Data" });
     expect(mocks.api.listDrives).toHaveBeenCalledTimes(1);
     await vi.waitFor(() => expect(state().drives[0].used).toBe(60));
 
@@ -311,55 +311,55 @@ describe("elenco delle unità", () => {
     expect(mocks.api.listDrives).toHaveBeenCalledTimes(2);
   });
 
-  it("un errore nella lettura delle unità non blocca l'app", async () => {
+  it("an error reading the drives does not block the app", async () => {
     mocks.api.listDrives.mockRejectedValue(new Error("boom"));
     await state().loadDrives();
-    expect(state().toast).toContain("Elenco unità");
+    expect(state().toast).toContain("Listing drives");
     expect(state().drives).toEqual([]);
   });
 });
 
-describe("scansione", () => {
-  it("passa allo stato di scansione e aggiorna l'avanzamento", () => {
-    state().startScan({ path: "C:\\Dati" });
+describe("scan", () => {
+  it("switches to the scanning state and updates progress", () => {
+    state().startScan({ path: "C:\\Data" });
     expect(state().screen).toBe("scanning");
-    expect(mocks.start).toHaveBeenCalledWith({ path: "C:\\Dati" }, expect.anything());
+    expect(mocks.start).toHaveBeenCalledWith({ path: "C:\\Data" }, expect.anything());
 
-    handlers.onProgress({ p: 0.5, cur: "C:\\Dati\\a", files: 3, dirs: 1, bytes: 9, elapsedMs: 10 });
+    handlers.onProgress({ p: 0.5, cur: "C:\\Data\\a", files: 3, dirs: 1, bytes: 9, elapsedMs: 10 });
     expect(state().scan).toMatchObject({ p: 0.5, files: 3 });
   });
 
-  it("annullando ferma lo scanner e mostra la schermata di annullamento", () => {
-    state().startScan({ path: "C:\\Dati" });
-    mocks.cancelScan.mockClear(); // l'avvio può annullare una scansione rimasta da un test precedente
+  it("cancelling stops the scanner and shows the cancellation screen", () => {
+    state().startScan({ path: "C:\\Data" });
+    mocks.cancelScan.mockClear(); // starting can cancel a scan left over from a previous test
     handlers.onProgress({ p: null, cur: "x", files: 7, dirs: 1, bytes: 99, elapsedMs: 10 });
     state().cancelScan();
     expect(mocks.cancelScan).toHaveBeenCalledOnce();
     expect(state().screen).toBe("error");
-    expect(state().error).toEqual({ kind: "cancelled", path: "C:\\Dati", files: 7, bytes: 99 });
+    expect(state().error).toEqual({ kind: "cancelled", path: "C:\\Data", files: 7, bytes: 99 });
   });
 
-  it("avviare una nuova scansione annulla quella in corso", () => {
-    state().startScan({ path: "C:\\Prima" });
+  it("starting a new scan cancels the one in progress", () => {
+    state().startScan({ path: "C:\\First" });
     mocks.cancelScan.mockClear();
-    state().startScan({ path: "C:\\Seconda" });
+    state().startScan({ path: "C:\\Second" });
     expect(mocks.cancelScan).toHaveBeenCalledOnce();
-    expect(state().target).toEqual({ path: "C:\\Seconda" });
+    expect(state().target).toEqual({ path: "C:\\Second" });
   });
 
-  it("accesso negato e altri errori", () => {
-    state().startScan({ path: "C:\\Protetta" });
+  it("access denied and other errors", () => {
+    state().startScan({ path: "C:\\Protected" });
     handlers.onDenied();
     expect(state().screen).toBe("error");
-    expect(state().error).toEqual({ kind: "denied", path: "C:\\Protetta" });
+    expect(state().error).toEqual({ kind: "denied", path: "C:\\Protected" });
 
-    state().startScan({ path: "C:\\Dati" });
+    state().startScan({ path: "C:\\Data" });
     handlers.onError("boom");
     expect(state().screen).toBe("empty");
     expect(state().toast).toContain("boom");
   });
 
-  it("al completamento carica la radice, espande le due cartelle più grandi e mostra i risultati", async () => {
+  it("on completion loads the root, expands the two largest folders and shows the results", async () => {
     await scanToResults(7);
     const s = state();
     expect(s.scanId).toBe(7);
@@ -368,32 +368,32 @@ describe("scansione", () => {
     expect(s.root?.name).toBe("C:\\");
     expect(s.selected).toBe(0);
 
-    // Espansi: radice, "grande" (la più grande) e "interno" (la più grande dentro "grande").
+    // Expanded: root, "big" (the largest) and "inner" (the largest inside "big").
     expect(s.expanded).toEqual({ 0: true, 1: true, 3: true });
     expect(mocks.api.getChildren).toHaveBeenCalledWith(7, [0]);
     expect(mocks.api.getChildren).toHaveBeenCalledWith(7, [1]);
     expect(mocks.api.getChildren).toHaveBeenCalledWith(7, [3]);
-    expect(treeCache.get(0)?.children.map((c) => c.name)).toEqual(["grande", "piccola", "vuota"]);
+    expect(treeCache.get(0)?.children.map((c) => c.name)).toEqual(["big", "small", "empty"]);
     expect(treeCache.get(3)?.children[0].parent).toBe(treeCache.get(3));
   });
 
-  it("memorizza le cartelle scansionate tra le recenti, ma non le unità intere", async () => {
+  it("remembers scanned folders among the recents, but not whole drives", async () => {
     await scanToResults();
-    expect(state().recents).toEqual(["C:\\Dati"]);
+    expect(state().recents).toEqual(["C:\\Data"]);
 
     state().startScan({ path: "C:\\", driveKey: "C" });
     handlers.onDone(done(2));
     await vi.waitFor(() => expect(state().scanId).toBe(2));
     await vi.waitFor(() => expect(state().screen).toBe("results"));
-    expect(state().recents).toEqual(["C:\\Dati"]);
+    expect(state().recents).toEqual(["C:\\Data"]);
   });
 
-  it("scarta i risultati di una scansione superata da una più recente", async () => {
-    state().startScan({ path: "C:\\Prima" });
+  it("discards the results of a scan superseded by a more recent one", async () => {
+    state().startScan({ path: "C:\\First" });
     const first = handlers;
     first.onDone(done(1));
-    // La seconda scansione parte mentre la prima sta ancora caricando i dati.
-    state().startScan({ path: "C:\\Seconda" });
+    // The second scan starts while the first is still loading data.
+    state().startScan({ path: "C:\\Second" });
     await flush();
     await flush();
     expect(state().screen).toBe("scanning");
@@ -401,8 +401,8 @@ describe("scansione", () => {
   });
 });
 
-describe("caricamento a richiesta", () => {
-  it("espandendo una cartella ne carica i figli una sola volta", async () => {
+describe("on-demand loading", () => {
+  it("expanding a folder loads its children only once", async () => {
     await scanToResults();
     mocks.api.getChildren.mockClear();
 
@@ -418,20 +418,20 @@ describe("caricamento a richiesta", () => {
     expect(state().expanded[2]).toBe(true);
   });
 
-  it("la versione dell'albero cresce a ogni caricamento", async () => {
+  it("the tree version grows with every load", async () => {
     await scanToResults();
     const before = state().treeVersion;
     state().toggle(2, true);
     await vi.waitFor(() => expect(state().treeVersion).toBeGreaterThan(before));
   });
 
-  it("la treemap carica i figli della cartella e delle sue sottocartelle principali", async () => {
+  it("the treemap loads the children of the folder and of its main subfolders", async () => {
     await scanToResults();
     mocks.api.getChildren.mockClear();
     await state().setTmRoot(1);
 
     expect(state().tmRoot).toBe(1);
-    // "interno" (3) era già caricata durante l'espansione iniziale: nessuna richiesta superflua.
+    // "inner" (3) was already loaded during the initial expansion: no superfluous request.
     expect(mocks.api.getChildren).not.toHaveBeenCalled();
 
     await state().setTmRoot(2);
@@ -439,7 +439,7 @@ describe("caricamento a richiesta", () => {
     expect(treeCache.get(2)?.childrenLoaded).toBe(true);
   });
 
-  it("rivela un nodo caricando le cartelle lungo il percorso", async () => {
+  it("reveals a node by loading the folders along the path", async () => {
     await scanToResults();
     mocks.api.getAncestors.mockResolvedValue([0, 2, 6]);
     const target = treeCache.upsert(TREE[2][0]);
@@ -456,11 +456,11 @@ describe("caricamento a richiesta", () => {
   });
 });
 
-describe("viste Top file e Tipi", () => {
-  it("carica i file più grandi, con il filtro per tipo", async () => {
+describe("Top files and Types views", () => {
+  it("loads the largest files, with the type filter", async () => {
     await scanToResults();
     mocks.api.getTopFiles.mockResolvedValue([
-      node({ id: 5, parentId: 3, kind: "file", name: "foglia.bin", size: 80 }),
+      node({ id: 5, parentId: 3, kind: "file", name: "leaf.bin", size: 80 }),
     ]);
 
     state().setTab("top");
@@ -472,7 +472,7 @@ describe("viste Top file e Tipi", () => {
     expect(mocks.api.getTopFiles).toHaveBeenLastCalledWith(1, "video", 40);
   });
 
-  it("da una riga della vista Tipi apre i Top file filtrati", async () => {
+  it("from a Types view row, opens the filtered Top files", async () => {
     await scanToResults();
     state().showTopFiles("doc");
     expect(state().tab).toBe("top");
@@ -480,7 +480,7 @@ describe("viste Top file e Tipi", () => {
     await vi.waitFor(() => expect(mocks.api.getTopFiles).toHaveBeenCalledWith(1, "doc", 40));
   });
 
-  it("carica le statistiche per tipo una sola volta", async () => {
+  it("loads the per-type statistics only once", async () => {
     await scanToResults();
     state().setTab("types");
     await vi.waitFor(() => expect(state().typeStats).not.toBeNull());
@@ -491,23 +491,23 @@ describe("viste Top file e Tipi", () => {
   });
 });
 
-describe("azioni sui nodi", () => {
-  it("apre in Esplora risorse", async () => {
+describe("node actions", () => {
+  it("opens in File Explorer", async () => {
     await scanToResults();
     const n = treeCache.get(1)!;
     state().act("open", n);
     expect(mocks.api.openInExplorer).toHaveBeenCalledWith(n.path);
-    await vi.waitFor(() => expect(state().toast).toContain("Esplora risorse"));
+    await vi.waitFor(() => expect(state().toast).toContain("File Explorer"));
   });
 
-  it("riporta l'errore se Esplora risorse non si apre", async () => {
+  it("reports the error if File Explorer fails to open", async () => {
     await scanToResults();
-    mocks.api.openInExplorer.mockRejectedValue("Percorso non trovato");
+    mocks.api.openInExplorer.mockRejectedValue("Path not found");
     state().act("open", treeCache.get(1)!);
-    await vi.waitFor(() => expect(state().toast).toContain("Percorso non trovato"));
+    await vi.waitFor(() => expect(state().toast).toContain("Path not found"));
   });
 
-  it("copia il percorso", async () => {
+  it("copies the path", async () => {
     await scanToResults();
     const writeText = vi.fn(async () => {});
     vi.stubGlobal("navigator", { clipboard: { writeText } });
@@ -516,10 +516,10 @@ describe("azioni sui nodi", () => {
     vi.unstubAllGlobals();
   });
 
-  it("la cartella scelta con la finestra di sistema viene scansionata", async () => {
-    mocks.pickFolder.mockResolvedValue("D:\\Foto");
+  it("the folder chosen with the system dialog gets scanned", async () => {
+    mocks.pickFolder.mockResolvedValue("D:\\Photos");
     await state().browseFolder();
-    expect(mocks.start).toHaveBeenCalledWith({ path: "D:\\Foto" }, expect.anything());
+    expect(mocks.start).toHaveBeenCalledWith({ path: "D:\\Photos" }, expect.anything());
 
     mocks.start.mockClear();
     mocks.pickFolder.mockResolvedValue(null);
@@ -527,7 +527,7 @@ describe("azioni sui nodi", () => {
     expect(mocks.start).not.toHaveBeenCalled();
   });
 
-  it("rivela la prima cartella non accessibile", async () => {
+  it("reveals the first inaccessible folder", async () => {
     await scanToResults();
     mocks.api.getDenied.mockResolvedValue([node({ id: 4, parentId: 0, kind: "denied" })]);
     mocks.api.getAncestors.mockResolvedValue([0, 4]);

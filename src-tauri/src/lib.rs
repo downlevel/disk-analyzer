@@ -22,7 +22,7 @@ pub fn run() {
             let log_dir = app.path().app_log_dir()?;
             let guard = logging::init(&log_dir);
             app.manage(guard);
-            info!(log_dir = %log_dir.display(), "Disk Analyzer avviato");
+            info!(log_dir = %log_dir.display(), "Disk Analyzer started");
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

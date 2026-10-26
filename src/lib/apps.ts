@@ -4,7 +4,7 @@ import type { InstalledApp } from "../bindings/InstalledApp";
 export type AppSortKey = "name" | "publisher" | "size" | "disk";
 export type AppSizes = Record<string, AppSize>;
 
-/** Come va letta la dimensione mostrata per un'app. */
+/** How the size shown for an app should be read. */
 export type SizeInfo =
   | { kind: "measured"; size: number; disk: number; files: number }
   | { kind: "estimated"; size: number }
@@ -15,13 +15,13 @@ export function sizeInfo(app: InstalledApp, sizes: AppSizes): SizeInfo {
   if (measured?.status === "measured") {
     return { kind: "measured", size: measured.size, disk: measured.disk, files: measured.files };
   }
-  // Qui `measured` può avere solo gli stati di errore: il caso "measured" è già stato gestito.
+  // Here `measured` can only have the error statuses: the "measured" case is already handled.
   if (measured) return { kind: measured.status };
   if (app.estimatedSize != null) return { kind: "estimated", size: app.estimatedSize };
   return { kind: "none" };
 }
 
-/** Dimensione usata per ordinare: misurata, altrimenti stimata, altrimenti -1. */
+/** Size used for sorting: measured, otherwise estimated, otherwise -1. */
 export function bestSize(app: InstalledApp, sizes: AppSizes): number {
   const info = sizeInfo(app, sizes);
   return info.kind === "measured" || info.kind === "estimated" ? info.size : -1;
@@ -40,8 +40,8 @@ export function filterApps(apps: InstalledApp[], query: string): InstalledApp[] 
 }
 
 /**
- * Ordina le app. Per dimensione si usa `basis` (non le misure correnti): durante la misura le righe
- * non saltano a ogni risultato, e l'ordine si aggiorna quando `basis` viene ricalcolata.
+ * Sorts apps. By size it uses `basis` (not the current measurements): while measuring, rows
+ * don't jump on every result, and the order updates when `basis` is recomputed.
  */
 export function sortApps(
   apps: InstalledApp[],
@@ -50,7 +50,7 @@ export function sortApps(
   basis: Record<string, number>,
   sizes: AppSizes,
 ): InstalledApp[] {
-  const byName = (a: InstalledApp, b: InstalledApp) => a.name.localeCompare(b.name, "it");
+  const byName = (a: InstalledApp, b: InstalledApp) => a.name.localeCompare(b.name, "en");
   const disk = (a: InstalledApp) => {
     const info = sizeInfo(a, sizes);
     return info.kind === "measured" ? info.disk : -1;
@@ -60,7 +60,7 @@ export function sortApps(
       case "name":
         return dir * byName(a, b);
       case "publisher":
-        return dir * (a.publisher ?? "").localeCompare(b.publisher ?? "", "it") || byName(a, b);
+        return dir * (a.publisher ?? "").localeCompare(b.publisher ?? "", "en") || byName(a, b);
       case "size":
         return dir * ((basis[a.id] ?? -1) - (basis[b.id] ?? -1)) || byName(a, b);
       case "disk":
@@ -70,9 +70,9 @@ export function sortApps(
 }
 
 export interface AppTotals {
-  /** App di cui è stata misurata la cartella. */
+  /** Apps whose folder has been measured. */
   measuredApps: number;
-  /** Dimensione delle cartelle misurate; le cartelle condivise contano una volta sola. */
+  /** Size of the measured folders; shared folders count only once. */
   size: number;
   disk: number;
 }

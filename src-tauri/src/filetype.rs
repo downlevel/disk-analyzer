@@ -1,12 +1,12 @@
-//! Classificazione dei file per estensione e formattazione delle date.
+//! File classification by extension and date formatting.
 
 use crate::model::FileType;
 
-/// Tipo di file a partire dall'estensione (minuscola, senza punto).
+/// File type from the extension (lowercase, without the dot).
 pub fn type_for_ext(ext: &str) -> FileType {
     match ext {
-        // ".ts" è anche un formato video (MPEG transport stream), ma sui PC di sviluppo
-        // è quasi sempre TypeScript: lo classifichiamo come codice.
+        // ".ts" is also a video format (MPEG transport stream), but on development PCs
+        // it is almost always TypeScript: we classify it as code.
         "mp4" | "mkv" | "mov" | "avi" | "wmv" | "webm" | "m4v" | "flv" | "mpg" | "mpeg"
         | "m2ts" => FileType::Video,
         "jpg" | "jpeg" | "png" | "gif" | "bmp" | "webp" | "heic" | "heif" | "raw" | "cr2"
@@ -23,8 +23,8 @@ pub fn type_for_ext(ext: &str) -> FileType {
     }
 }
 
-/// Estensione minuscola con il punto (es. ".mp4"), oppure stringa vuota se assente.
-/// I file che iniziano con il punto (es. ".gitignore") non hanno estensione.
+/// Lowercase extension with the dot (e.g. ".mp4"), or an empty string if absent.
+/// Files that start with a dot (e.g. ".gitignore") have no extension.
 pub fn ext_of(name: &str) -> String {
     match name.rfind('.') {
         Some(i) if i > 0 && i + 1 < name.len() => name[i..].to_lowercase(),
@@ -33,12 +33,12 @@ pub fn ext_of(name: &str) -> String {
 }
 
 pub(crate) const MONTHS: [&str; 12] = [
-    "gen", "feb", "mar", "apr", "mag", "giu", "lug", "ago", "set", "ott", "nov", "dic",
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ];
 
-/// Data (UTC) in formato "14 nov 2023" a partire dai secondi dall'epoca Unix.
+/// Date (UTC) formatted as "14 Nov 2023" from seconds since the Unix epoch.
 pub fn format_date(secs: i64) -> String {
-    // Algoritmo "civil from days" di Howard Hinnant.
+    // Howard Hinnant's "civil from days" algorithm.
     let z = secs.div_euclid(86_400) + 719_468;
     let era = z.div_euclid(146_097);
     let doe = z.rem_euclid(146_097);
@@ -56,7 +56,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn classifica_per_estensione() {
+    fn classifies_by_extension() {
         assert_eq!(type_for_ext("mkv"), FileType::Video);
         assert_eq!(type_for_ext("heic"), FileType::Img);
         assert_eq!(type_for_ext("xlsx"), FileType::Doc);
@@ -69,19 +69,19 @@ mod tests {
     }
 
     #[test]
-    fn estrae_l_estensione() {
-        assert_eq!(ext_of("Film.MP4"), ".mp4");
-        assert_eq!(ext_of("archivio.tar.gz"), ".gz");
+    fn extracts_the_extension() {
+        assert_eq!(ext_of("Movie.MP4"), ".mp4");
+        assert_eq!(ext_of("archive.tar.gz"), ".gz");
         assert_eq!(ext_of("README"), "");
         assert_eq!(ext_of(".gitignore"), "");
-        assert_eq!(ext_of("fine."), "");
+        assert_eq!(ext_of("end."), "");
     }
 
     #[test]
-    fn formatta_le_date() {
-        assert_eq!(format_date(0), "1 gen 1970");
-        assert_eq!(format_date(1_700_000_000), "14 nov 2023");
-        assert_eq!(format_date(951_782_400), "29 feb 2000"); // anno bisestile
-        assert_eq!(format_date(-86_400), "31 dic 1969");
+    fn formats_dates() {
+        assert_eq!(format_date(0), "1 Jan 1970");
+        assert_eq!(format_date(1_700_000_000), "14 Nov 2023");
+        assert_eq!(format_date(951_782_400), "29 Feb 2000"); // leap year
+        assert_eq!(format_date(-86_400), "31 Dec 1969");
     }
 }

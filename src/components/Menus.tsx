@@ -6,7 +6,7 @@ import { useStore } from "../store";
 const MENU_ITEM =
   "flex w-full items-center rounded-[5px] text-left outline-none hover:bg-hover focus:bg-hover";
 
-/** Navigazione da tastiera comune ai menu: frecce, Home/End, Esc/Tab per chiudere. */
+/** Keyboard navigation shared by the menus: arrows, Home/End, Esc/Tab to close. */
 function useMenuKeys(ref: React.RefObject<HTMLDivElement | null>, close: () => void) {
   return (e: KeyboardEvent) => {
     const items = [...(ref.current?.querySelectorAll<HTMLElement>("[role=menuitem]") ?? [])];
@@ -93,24 +93,24 @@ export function ContextMenu() {
         ref={ref}
         role="menu"
         tabIndex={-1}
-        aria-label="Azioni elemento"
+        aria-label="Item actions"
         onKeyDown={onKeyDown}
         style={{ left: menu.x, top: menu.y }}
         className="fixed z-[41] w-60 rounded-lg border border-border bg-popover p-1 shadow-pop outline-none"
       >
         <div className="truncate px-2 py-1.5 text-[11.5px] text-muted-fg">{node.path}</div>
-        {item(<ExternalLink size={15} />, "Apri in Esplora risorse", () => act("open", node))}
-        {item(<Copy size={15} />, "Copia percorso", () => act("copy", node), "Ctrl+C")}
+        {item(<ExternalLink size={15} />, "Open in File Explorer", () => act("open", node))}
+        {item(<Copy size={15} />, "Copy path", () => act("copy", node), "Ctrl+C")}
         {canShowInMap && from !== "map" && (
           <>
             <Separator />
-            {item(<LayoutGrid size={15} />, "Mostra nella treemap", () => act("map", node))}
+            {item(<LayoutGrid size={15} />, "Show in treemap", () => act("map", node))}
           </>
         )}
         {from !== "tree" && (
           <>
             <Separator />
-            {item(<ListTree size={15} />, "Mostra nell'albero", () => act("tree", node))}
+            {item(<ListTree size={15} />, "Show in tree", () => act("tree", node))}
           </>
         )}
       </div>
@@ -145,14 +145,14 @@ export function FolderPicker() {
         ref={ref}
         role="menu"
         tabIndex={-1}
-        aria-label="Scegli cartella"
+        aria-label="Choose folder"
         onKeyDown={onKeyDown}
         style={{ left: picker.x, top: picker.y }}
         className="fixed z-[41] w-[310px] rounded-lg border border-border bg-popover p-1 shadow-pop outline-none"
       >
-        <div className="px-2 py-1.5 text-[11.5px] text-muted-fg">Cartelle recenti</div>
+        <div className="px-2 py-1.5 text-[11.5px] text-muted-fg">Recent folders</div>
         {recents.length === 0 && (
-          <div className="px-2 py-2 text-muted-fg">Nessuna cartella recente</div>
+          <div className="px-2 py-2 text-muted-fg">No recent folders</div>
         )}
         {recents.map((path) => (
           <button
@@ -174,7 +174,7 @@ export function FolderPicker() {
           className={`${MENU_ITEM} h-8 gap-2.5 px-2`}
         >
           <FolderOpen size={15} className="flex-none text-muted-fg" />
-          Sfoglia…
+          Browse…
         </button>
       </div>
     </>

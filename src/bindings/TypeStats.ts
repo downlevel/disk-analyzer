@@ -3,6 +3,6 @@ import type { ExtStat } from "./ExtStat";
 import type { TypeStat } from "./TypeStat";
 
 /**
- * Ripartizione dello spazio per tipo di file e per estensione.
+ * Space breakdown by file type and by extension.
  */
 export type TypeStats = { types: Array<TypeStat>, exts: Array<ExtStat>, totalSize: number, totalFiles: number, };

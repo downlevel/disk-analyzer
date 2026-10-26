@@ -29,38 +29,38 @@ const file = (name: string, size: number, type: FileType) =>
 describe("sortChildren", () => {
   const a = file("b.txt", 10, "other");
   const b = file("a.txt", 30, "other");
-  const agg = node({ name: "File (9)", agg: true, size: 999 });
+  const agg = node({ name: "Files (9)", agg: true, size: 999 });
   const root = node({ name: "root", isDir: true, children: [a, agg, b] });
 
-  it("ordina per dimensione e tiene in fondo il nodo aggregato", () => {
+  it("sorts by size and keeps the aggregate node last", () => {
     expect(sortChildren(root, "size", -1).map((n) => n.name)).toEqual([
       "a.txt",
       "b.txt",
-      "File (9)",
+      "Files (9)",
     ]);
     expect(sortChildren(root, "size", 1).map((n) => n.name)).toEqual([
       "b.txt",
       "a.txt",
-      "File (9)",
+      "Files (9)",
     ]);
   });
 
-  it("ordina per nome", () => {
+  it("sorts by name", () => {
     expect(sortChildren(root, "name", 1).map((n) => n.name)).toEqual([
       "a.txt",
       "b.txt",
-      "File (9)",
+      "Files (9)",
     ]);
   });
 
-  it("non modifica l'ordine originale dei figli", () => {
+  it("does not modify the original order of the children", () => {
     sortChildren(root, "size", -1);
-    expect(root.children.map((n) => n.name)).toEqual(["b.txt", "File (9)", "a.txt"]);
+    expect(root.children.map((n) => n.name)).toEqual(["b.txt", "Files (9)", "a.txt"]);
   });
 });
 
 describe("dominantType / nodeType", () => {
-  it("trova il tipo prevalente di una cartella", () => {
+  it("finds the predominant type of a folder", () => {
     const dir = node({
       name: "d",
       isDir: true,
@@ -68,25 +68,25 @@ describe("dominantType / nodeType", () => {
     });
     expect(dominantType(dir)).toBe("video");
     expect(nodeType(dir)).toBe("video");
-    expect(dominantType(node({ name: "vuota", isDir: true }))).toBe("other");
+    expect(dominantType(node({ name: "empty", isDir: true }))).toBe("other");
   });
 
-  it("per i file usa il tipo del file", () => {
+  it("for files uses the file's type", () => {
     expect(nodeType(file("a.pdf", 5, "doc"))).toBe("doc");
-    expect(nodeType(node({ name: "senza-tipo" }))).toBe("other");
+    expect(nodeType(node({ name: "no-type" }))).toBe("other");
   });
 });
 
 describe("dirnameOf", () => {
-  it("restituisce la cartella che contiene il file", () => {
-    expect(dirnameOf("C:\\Users\\marco\\file.txt")).toBe("C:\\Users\\marco");
+  it("returns the folder containing the file", () => {
+    expect(dirnameOf("C:\\Users\\user\\file.txt")).toBe("C:\\Users\\user");
   });
 
-  it("mantiene la barra per la radice di un'unità", () => {
+  it("keeps the backslash for a drive root", () => {
     expect(dirnameOf("C:\\file.txt")).toBe("C:\\");
   });
 
-  it("restituisce il percorso invariato se non ha separatori", () => {
+  it("returns the path unchanged if it has no separators", () => {
     expect(dirnameOf("file.txt")).toBe("file.txt");
   });
 });

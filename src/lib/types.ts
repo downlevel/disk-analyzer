@@ -1,34 +1,34 @@
 export type { FileType } from "../bindings/FileType";
 import type { FileType } from "../bindings/FileType";
 
-/** Elemento dell'albero lato interfaccia. I figli vengono caricati a richiesta dal core Rust. */
+/** Tree item on the UI side. Children are loaded on demand from the Rust core. */
 export interface TreeNode {
   id: number;
   name: string;
   path: string;
   parent: TreeNode | null;
   parentId: number | null;
-  /** Cartella (anche non accessibile). */
+  /** Folder (even if inaccessible). */
   isDir: boolean;
-  /** Cartella non accessibile (permesso negato). */
+  /** Inaccessible folder (permission denied). */
   denied?: boolean;
-  /** Nodo sintetico "File (N)" che raggruppa i file di una cartella. */
+  /** Synthetic "File (N)" node that groups a folder's files. */
   agg?: boolean;
   children: TreeNode[];
-  /** Numero di figli esistenti (anche se non ancora caricati). */
+  /** Number of existing children (even if not loaded yet). */
   childCount: number;
   childrenLoaded: boolean;
-  /** Dimensione logica in byte. */
+  /** Logical size in bytes. */
   size: number;
-  /** Dimensione su disco in byte. */
+  /** Size on disk in bytes. */
   disk: number;
   files: number;
   dirs: number;
-  /** Tipo di file (solo file e nodi aggregati). */
+  /** File type (files and aggregate nodes only). */
   type?: FileType;
   ext?: string;
   modified?: string;
-  /** Byte per tipo di file. */
+  /** Bytes per file type. */
   byType: Partial<Record<FileType, number>>;
 }
 
@@ -38,7 +38,7 @@ export interface ScanTarget {
 }
 
 export interface ScanProgress {
-  /** 0..1, oppure `null` se non stimabile (scansione di una cartella). */
+  /** 0..1, or `null` if it can't be estimated (scanning a folder). */
   p: number | null;
   cur: string;
   files: number;

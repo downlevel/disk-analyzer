@@ -1,4 +1,4 @@
-//! Funzioni specifiche di Windows: unità disco e dimensione dei cluster.
+//! Windows-specific functions: disk drives and cluster size.
 
 use std::path::Path;
 
@@ -13,7 +13,7 @@ const DRIVE_REMOVABLE: u32 = 2;
 const DRIVE_FIXED: u32 = 3;
 const DRIVE_REMOTE: u32 = 4;
 
-/// Cluster usato quando non si riesce a leggere quello del volume.
+/// Cluster size used when the volume's own cannot be read.
 pub const DEFAULT_CLUSTER_SIZE: u64 = 4096;
 
 fn wide(s: &str) -> Vec<u16> {
@@ -25,7 +25,7 @@ fn from_wide(buf: &[u16]) -> String {
     String::from_utf16_lossy(&buf[..len])
 }
 
-/// Spazio totale e libero (byte) del volume che contiene `path`.
+/// Total and free space (bytes) of the volume that contains `path`.
 pub fn volume_space(path: &str) -> Option<(u64, u64)> {
     let w = wide(path);
     let (mut free, mut total) = (0u64, 0u64);
@@ -35,7 +35,7 @@ pub fn volume_space(path: &str) -> Option<(u64, u64)> {
     Some((total, free))
 }
 
-/// Radice del volume (es. `C:\`) per un percorso con lettera di unità.
+/// Volume root (e.g. `C:\`) for a path with a drive letter.
 pub fn volume_root(path: &Path) -> Option<String> {
     let s = path.to_str()?;
     let mut chars = s.chars();
@@ -44,7 +44,7 @@ pub fn volume_root(path: &Path) -> Option<String> {
         .then(|| format!("{}:\\", letter.to_ascii_uppercase()))
 }
 
-/// Dimensione del cluster (byte) del volume che contiene `path`.
+/// Cluster size (bytes) of the volume that contains `path`.
 pub fn cluster_size(path: &Path) -> u64 {
     let Some(root) = volume_root(path) else {
         return DEFAULT_CLUSTER_SIZE;
@@ -86,7 +86,7 @@ fn volume_info(root: &str) -> (String, String) {
     (from_wide(&label), from_wide(&fs))
 }
 
-/// Unità disco presenti (fisse, rimovibili e di rete) con spazio totale e usato.
+/// Disk drives present (fixed, removable and network) with total and used space.
 pub fn list_drives() -> Vec<Drive> {
     let mask = unsafe { GetLogicalDrives() };
     let mut drives = Vec::new();
@@ -98,12 +98,12 @@ pub fn list_drives() -> Vec<Drive> {
         let path = format!("{key}:\\");
         let w = wide(&path);
         let kind_name = match unsafe { GetDriveTypeW(PCWSTR(w.as_ptr())) } {
-            DRIVE_FIXED => "Disco locale",
-            DRIVE_REMOVABLE => "Rimovibile",
-            DRIVE_REMOTE => "Rete",
-            _ => continue, // lettori ottici, RAM disk, tipo sconosciuto
+            DRIVE_FIXED => "Local disk",
+            DRIVE_REMOVABLE => "Removable",
+            DRIVE_REMOTE => "Network",
+            _ => continue, // optical drives, RAM disks, unknown type
         };
-        // Salta le unità non pronte (es. lettore senza supporto).
+        // Skip drives that are not ready (e.g. a reader with no media).
         let Some((total, free)) = volume_space(&path) else {
             continue;
         };
@@ -134,7 +134,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn radice_del_volume() {
+    fn volume_root_of_a_path() {
         assert_eq!(
             volume_root(Path::new(r"c:\Users\x")).as_deref(),
             Some(r"C:\")
@@ -144,7 +144,7 @@ mod tests {
     }
 
     #[test]
-    fn cluster_di_default_per_percorsi_senza_lettera() {
+    fn default_cluster_for_paths_without_a_letter() {
         assert_eq!(
             cluster_size(Path::new(r"\\server\share")),
             DEFAULT_CLUSTER_SIZE
@@ -152,7 +152,7 @@ mod tests {
     }
 
     #[test]
-    fn il_disco_di_sistema_e_elencato() {
+    fn the_system_drive_is_listed() {
         let drives = list_drives();
         assert!(!drives.is_empty());
         for d in &drives {
@@ -162,7 +162,7 @@ mod tests {
     }
 
     #[test]
-    fn cluster_reale_e_una_potenza_di_due() {
+    fn real_cluster_is_a_power_of_two() {
         let root = std::env::var("SystemDrive").unwrap_or_else(|_| "C:".into());
         let c = cluster_size(Path::new(&format!("{root}\\")));
         assert!(c.is_power_of_two() && c >= 512, "cluster = {c}");

@@ -16,16 +16,16 @@ export function Toolbar() {
 
   const results = screen === "results";
   let meta = "";
-  if (results) meta = `Sola lettura · analizzato alle ${scannedAt} in ${durationSec} s`;
-  else if (screen === "scanning" && scan) meta = `Scansione · ${fmtProgress(scan.p)}`;
-  else if (screen === "error") meta = "Scansione non completata";
+  if (results) meta = `Read-only · scanned at ${scannedAt} in ${durationSec} s`;
+  else if (screen === "scanning" && scan) meta = `Scanning · ${fmtProgress(scan.p)}`;
+  else if (screen === "error") meta = "Scan not completed";
 
   return (
     <div className="flex h-[52px] flex-none items-center gap-2.5 border-b border-border px-4">
       <button
         type="button"
-        aria-label="Mostra o nascondi barra laterale"
-        title="Barra laterale"
+        aria-label="Show or hide sidebar"
+        title="Sidebar"
         onClick={toggleSidebar}
         className="grid size-8 flex-none place-items-center rounded-md text-muted-fg hover:bg-hover hover:text-fg"
       >
@@ -34,14 +34,14 @@ export function Toolbar() {
       <div className="flex h-8 min-w-0 flex-1 items-center gap-2 rounded-md border border-border bg-muted px-2.5">
         <Folder size={15} className="flex-none text-muted-fg" />
         <span className={`truncate font-medium ${target ? "text-fg" : "text-muted-fg"}`}>
-          {target ? target.path : "Nessuna unità o cartella selezionata"}
+          {target ? target.path : "No drive or folder selected"}
         </span>
         <span className="ml-auto text-xs whitespace-nowrap text-muted-fg tabular-nums">{meta}</span>
       </div>
       {screen === "scanning" ? (
         <Button variant="danger" size="sm" onClick={cancelScan}>
           <X size={15} />
-          Annulla
+          Cancel
         </Button>
       ) : (
         <Button
@@ -52,7 +52,7 @@ export function Toolbar() {
           onClick={() => target && startScan(target)}
         >
           <RefreshCw size={15} />
-          {results ? "Riscansiona" : "Scansiona"}
+          {results ? "Rescan" : "Scan"}
         </Button>
       )}
     </div>

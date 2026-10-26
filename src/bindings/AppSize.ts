@@ -2,6 +2,6 @@
 import type { SizeStatus } from "./SizeStatus";
 
 /**
- * Dimensione misurata della cartella di un'app.
+ * Measured size of an app's folder.
  */
 export type AppSize = { id: string, status: SizeStatus, path: string, size: number, disk: number, files: number, };

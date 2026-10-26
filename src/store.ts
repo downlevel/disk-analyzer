@@ -23,13 +23,13 @@ import { api, pickFolder } from "./services/api";
 import { listenAppSizes } from "./services/appSizes";
 import { tauriScanner } from "./services/tauriScanner";
 
-/** Nodi dell'albero ricevuti dal core. Modificata in place: le viste si aggiornano con `treeVersion`. */
+/** Tree nodes received from the core. Mutated in place: views refresh via `treeVersion`. */
 export const treeCache = new TreeCache();
 
 const EXT_LIMIT = 12;
-/** Cartelle della treemap di cui si caricano anche i figli (quelle abbastanza grandi da avere un gruppo). */
+/** Treemap folders whose children are loaded too (those large enough to get a group). */
 const TREEMAP_GROUPS = 40;
-/** Massimo di nodi per chiamata a `get_children` (limite del core). */
+/** Maximum nodes per `get_children` call (core limit). */
 const CHILDREN_BATCH = 200;
 const RECENTS_KEY = "disk-analyzer.recents";
 const RECENTS_MAX = 8;
@@ -51,7 +51,7 @@ export interface ScanSummary {
 
 export type TypeFilter = "all" | FileType;
 
-/** Sezione dell'app: analisi dei dischi oppure elenco delle app installate. */
+/** App section: disk analysis or the list of installed apps. */
 export type Section = "disk" | "apps";
 
 interface State {
@@ -65,7 +65,7 @@ interface State {
   appsProgress: { done: number; total: number };
   appQuery: string;
   appSort: { key: AppSortKey; dir: 1 | -1 };
-  /** Dimensione usata per ordinare: si ricalcola a fine misura, così le righe non saltano. */
+  /** Size used for sorting: recomputed when measuring ends, so rows don't jump around. */
   appSortBasis: Record<string, number>;
 
   screen: Screen;
@@ -78,7 +78,7 @@ interface State {
   summary: ScanSummary | null;
   scannedAt: string;
   durationSec: number;
-  /** Incrementato a ogni modifica della cache: le viste che la leggono lo usano come dipendenza. */
+  /** Incremented on every cache change: views reading the cache use it as a dependency. */
   treeVersion: number;
 
   tab: TabId;
@@ -95,7 +95,7 @@ interface State {
   menu: MenuState | null;
   picker: { x: number; y: number } | null;
   toast: string | null;
-  /** Incrementato per chiedere all'albero di prendere il focus e mostrare la riga selezionata. */
+  /** Incremented to ask the tree to take focus and show the selected row. */
   treeFocusRequest: number;
 }
 
@@ -133,7 +133,7 @@ interface Actions {
 
 let cancelActiveScan: (() => void) | null = null;
 let toastTimer: ReturnType<typeof setTimeout> | undefined;
-/** Cambia a ogni nuova scansione: scarta i risultati delle richieste ormai superate. */
+/** Changes on every new scan: discards results of requests that are now stale. */
 let epoch = 0;
 
 const messageOf = (err: unknown) => (err instanceof Error ? err.message : String(err));
@@ -155,7 +155,7 @@ function saveRecents(recents: string[]) {
   try {
     localStorage.setItem(RECENTS_KEY, JSON.stringify(recents));
   } catch {
-    // L'archiviazione può non essere disponibile: le cartelle recenti restano solo in memoria.
+    // Storage may be unavailable: recent folders then live in memory only.
   }
 }
 
@@ -163,7 +163,7 @@ export const useStore = create<State & Actions>((set, get) => {
   const bump = () => set((s) => ({ treeVersion: s.treeVersion + 1 }));
   const fail = (what: string) => (err: unknown) => get().showToast(`${what}: ${messageOf(err)}`);
 
-  /** Carica dal core i figli dei nodi indicati, se non li abbiamo già. */
+  /** Loads the children of the given nodes from the core, if we don't have them yet. */
   async function ensureChildren(ids: number[]) {
     const scanId = get().scanId;
     if (scanId == null) return;
@@ -173,13 +173,13 @@ export const useStore = create<State & Actions>((set, get) => {
     });
     for (let i = 0; i < need.length; i += CHILDREN_BATCH) {
       const results = await api.getChildren(scanId, need.slice(i, i + CHILDREN_BATCH));
-      if (get().scanId !== scanId) return; // nel frattempo è iniziata un'altra scansione
+      if (get().scanId !== scanId) return; // another scan started in the meantime
       for (const r of results) treeCache.setChildren(r.parentId, r.children);
     }
     if (need.length) bump();
   }
 
-  /** Carica i figli della cartella e, dei suoi figli, le cartelle più grandi (le raffigura la treemap). */
+  /** Loads the folder's children and, of those, the largest folders (the treemap draws them). */
   async function loadTreemapData(id: number) {
     await ensureChildren([id]);
     const node = treeCache.get(id);
@@ -215,7 +215,7 @@ export const useStore = create<State & Actions>((set, get) => {
     if (get().scanId === scanId) set({ typeStats: stats });
   }
 
-  /** Dati necessari alla vista indicata, caricati al primo accesso. */
+  /** Data needed by the given view, loaded on first access. */
   async function loadTabData(tab: TabId) {
     if (tab === "map") {
       const id = get().tmRoot;
@@ -228,7 +228,7 @@ export const useStore = create<State & Actions>((set, get) => {
     }
   }
 
-  /** Espande la radice e le due cartelle più grandi lungo il percorso principale. */
+  /** Expands the root and the two largest folders along the main path. */
   async function expandInitial(root: TreeNode): Promise<Record<number, boolean>> {
     const expanded: Record<number, boolean> = { [root.id]: true };
     await ensureChildren([root.id]);
@@ -271,20 +271,20 @@ export const useStore = create<State & Actions>((set, get) => {
         topFiles: null,
         typeStats: null,
         recents,
-        scannedAt: new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" }),
+        scannedAt: new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
         durationSec: Math.max(1, Math.round(done.elapsedMs / 1000)),
         treeVersion: s.treeVersion + 1,
       }));
       void get().loadDrives();
-      void loadTabData(get().tab).catch(fail("Caricamento dati"));
+      void loadTabData(get().tab).catch(fail("Loading data"));
     } catch (err) {
       if (epoch !== myEpoch) return;
       set({ screen: "empty", scan: null, scanId: null });
-      get().showToast(`Scansione non riuscita: ${messageOf(err)}`);
+      get().showToast(`Scan failed: ${messageOf(err)}`);
     }
   }
 
-  // Eventi della misura delle app: ci si registra una sola volta, alla prima misura.
+  // App measurement events: registered only once, on the first measurement.
   let appListeners: Promise<unknown> | null = null;
   const ensureAppListeners = () =>
     (appListeners ??= listenAppSizes({
@@ -294,7 +294,7 @@ export const useStore = create<State & Actions>((set, get) => {
           appsProgress: { ...s.appsProgress, done: s.appsProgress.done + 1 },
         })),
       onDone: (done) => {
-        // L'annullamento di una misura superata da una nuova non deve fermare quella nuova.
+        // Cancelling a measurement superseded by a new one must not stop the new one.
         if (done.cancelled && done.total > 0) return;
         set((s) => ({
           appsMeasuring: false,
@@ -348,7 +348,7 @@ export const useStore = create<State & Actions>((set, get) => {
       try {
         set({ drives: await api.listDrives() });
       } catch (err) {
-        fail("Elenco unità")(err);
+        fail("Listing drives")(err);
       }
     },
 
@@ -366,7 +366,7 @@ export const useStore = create<State & Actions>((set, get) => {
         set({ apps, appsLoading: false, appSizes: {}, appSortBasis: bestSizes(apps, {}) });
       } catch (err) {
         set({ apps: [], appsLoading: false });
-        fail("Elenco app")(err);
+        fail("Listing apps")(err);
         return;
       }
       void get().measureApps();
@@ -385,7 +385,7 @@ export const useStore = create<State & Actions>((set, get) => {
       } catch (err) {
         appListeners = null;
         set({ appsMeasuring: false });
-        fail("Misura delle app")(err);
+        fail("Measuring apps")(err);
       }
     },
 
@@ -412,13 +412,13 @@ export const useStore = create<State & Actions>((set, get) => {
 
     openAppFolder: (app) => {
       if (!app.installLocation) return;
-      api.openInExplorer(app.installLocation).catch(fail("Apertura in Esplora risorse"));
+      api.openInExplorer(app.installLocation).catch(fail("Opening in File Explorer"));
     },
 
     copyAppPath: (app) => {
       if (!app.installLocation) return;
       navigator.clipboard?.writeText(app.installLocation).catch(() => {});
-      get().showToast(`Percorso copiato: ${app.installLocation}`);
+      get().showToast(`Path copied: ${app.installLocation}`);
     },
 
     startScan: (target) => {
@@ -435,8 +435,8 @@ export const useStore = create<State & Actions>((set, get) => {
         root: null,
         scan: { p: null, cur: target.path, files: 0, dirs: 0, bytes: 0, elapsedMs: 0 },
       });
-      // Lo spazio libero cambia fuori dall'app (file cancellati, download…): lo si rilegge
-      // a ogni scansione, all'inizio e alla fine, e quando la finestra torna in primo piano.
+      // Free space changes outside the app (deleted files, downloads…): it is re-read
+      // on every scan, at the start and at the end, and when the window regains focus.
       void get().loadDrives();
       cancelActiveScan = tauriScanner.start(target, {
         onProgress: (scan) => set({ scan }),
@@ -447,7 +447,7 @@ export const useStore = create<State & Actions>((set, get) => {
         onError: (message) => {
           cancelActiveScan = null;
           set({ screen: "empty", scan: null });
-          get().showToast(`Scansione non riuscita: ${message}`);
+          get().showToast(`Scan failed: ${message}`);
         },
         onDone: (done) => {
           cancelActiveScan = null;
@@ -477,7 +477,7 @@ export const useStore = create<State & Actions>((set, get) => {
 
     setTab: (tab) => {
       set({ tab });
-      void loadTabData(tab).catch(fail("Caricamento dati"));
+      void loadTabData(tab).catch(fail("Loading data"));
     },
 
     setSort: (key, defaultDir) =>
@@ -488,7 +488,7 @@ export const useStore = create<State & Actions>((set, get) => {
     toggle: (id, force) => {
       const open = force ?? !get().expanded[id];
       set((s) => ({ expanded: { ...s.expanded, [id]: open } }));
-      if (open) void ensureChildren([id]).catch(fail("Caricamento cartella"));
+      if (open) void ensureChildren([id]).catch(fail("Loading folder"));
     },
 
     select: (id) => set({ selected: id }),
@@ -497,7 +497,7 @@ export const useStore = create<State & Actions>((set, get) => {
       try {
         await loadTreemapData(id);
       } catch (err) {
-        fail("Caricamento cartella")(err);
+        fail("Loading folder")(err);
         return;
       }
       set((s) => ({ tmRoot: id, treeVersion: s.treeVersion + 1 }));
@@ -505,12 +505,12 @@ export const useStore = create<State & Actions>((set, get) => {
 
     setTypeFilter: (typeFilter) => {
       set({ typeFilter });
-      void loadTopFiles().catch(fail("Caricamento file"));
+      void loadTopFiles().catch(fail("Loading files"));
     },
 
     showTopFiles: (typeFilter) => {
       set({ tab: "top", typeFilter });
-      void loadTopFiles().catch(fail("Caricamento file"));
+      void loadTopFiles().catch(fail("Loading files"));
     },
 
     setSidebarManual: (collapsed) => set({ sidebarManual: collapsed }),
@@ -529,7 +529,7 @@ export const useStore = create<State & Actions>((set, get) => {
         const path = await pickFolder();
         if (path) get().startScan({ path });
       } catch (err) {
-        fail("Selezione cartella")(err);
+        fail("Selecting folder")(err);
       }
     },
 
@@ -539,16 +539,16 @@ export const useStore = create<State & Actions>((set, get) => {
       if (kind === "open") {
         api
           .openInExplorer(node.path)
-          .then(() => get().showToast(`Aperto in Esplora risorse: ${node.path}`))
-          .catch(fail("Apertura in Esplora risorse"));
+          .then(() => get().showToast(`Opened in File Explorer: ${node.path}`))
+          .catch(fail("Opening in File Explorer"));
       } else if (kind === "copy") {
         navigator.clipboard?.writeText(node.path).catch(() => {});
-        get().showToast(`Percorso copiato: ${node.path}`);
+        get().showToast(`Path copied: ${node.path}`);
       } else if (kind === "map") {
         set({ tab: "map" });
         void get().setTmRoot(node.id);
       } else {
-        void get().reveal(node).catch(fail("Caricamento cartella"));
+        void get().reveal(node).catch(fail("Loading folder"));
       }
       if (from === "tree" && kind !== "map" && kind !== "tree") {
         set((s) => ({ treeFocusRequest: s.treeFocusRequest + 1 }));
@@ -579,7 +579,7 @@ export const useStore = create<State & Actions>((set, get) => {
         const [first] = await api.getDenied(scanId, 1);
         if (first) await get().reveal(treeCache.upsert(first));
       } catch (err) {
-        fail("Caricamento cartelle")(err);
+        fail("Loading folders")(err);
       }
     },
 

@@ -29,8 +29,8 @@
     "active": true,
     "targets": ["nsis"],
     "category": "Utility",
-    "shortDescription": "Analizzatore dello spazio su disco",
-    "longDescription": "Scansiona unità e cartelle in sola lettura e mostra cosa occupa spazio: albero, treemap, file più grandi e ripartizione per tipo.",
+    "shortDescription": "Disk space analyzer",
+    "longDescription": "Scans drives and folders read-only and shows what takes up space: tree, treemap, largest files and breakdown by type.",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -41,7 +41,7 @@
     "windows": {
       "nsis": {
         "installMode": "currentUser",
-        "languages": ["Italian"]
+        "languages": ["English"]
       }
     }
   }

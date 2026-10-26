@@ -29,7 +29,7 @@ function measured(
 }
 
 describe("sizeInfo / bestSize", () => {
-  it("preferisce la dimensione misurata a quella stimata", () => {
+  it("prefers the measured size over the estimated one", () => {
     const a = app("a", { estimatedSize: 100 });
     expect(sizeInfo(a, { a: measured("a", 500, 600) })).toEqual({
       kind: "measured",
@@ -40,7 +40,7 @@ describe("sizeInfo / bestSize", () => {
     expect(bestSize(a, { a: measured("a", 500) })).toBe(500);
   });
 
-  it("ripiega sulla stima del registro, poi su nessun dato", () => {
+  it("falls back to the registry estimate, then to no data", () => {
     expect(sizeInfo(app("a", { estimatedSize: 100 }), {})).toEqual({
       kind: "estimated",
       size: 100,
@@ -49,7 +49,7 @@ describe("sizeInfo / bestSize", () => {
     expect(bestSize(app("a"), {})).toBe(-1);
   });
 
-  it("riporta gli stati di errore della misura, anche se c'è una stima", () => {
+  it("reports the measurement error statuses, even if there is an estimate", () => {
     const a = app("a", { estimatedSize: 100 });
     for (const status of ["missing", "denied", "failed"] as const) {
       expect(sizeInfo(a, { a: { ...measured("a", 0), status } })).toEqual({ kind: status });
@@ -57,7 +57,7 @@ describe("sizeInfo / bestSize", () => {
     }
   });
 
-  it("bestSizes copre tutte le app", () => {
+  it("bestSizes covers all apps", () => {
     const apps = [app("a", { estimatedSize: 5 }), app("b")];
     expect(bestSizes(apps, { b: measured("b", 9) })).toEqual({ a: 5, b: 9 });
   });
@@ -70,13 +70,13 @@ describe("filterApps", () => {
     app("Node.js", { publisher: null }),
   ];
 
-  it("cerca nel nome e nell'editore, senza distinguere maiuscole", () => {
+  it("searches the name and the publisher, case-insensitively", () => {
     expect(filterApps(apps, "git").map((a) => a.id)).toEqual(["Git"]);
     expect(filterApps(apps, "PAVLOV").map((a) => a.id)).toEqual(["7-Zip"]);
     expect(filterApps(apps, "  node ").map((a) => a.id)).toEqual(["Node.js"]);
   });
 
-  it("una ricerca vuota restituisce tutto", () => {
+  it("an empty search returns everything", () => {
     expect(filterApps(apps, "  ")).toBe(apps);
     expect(filterApps(apps, "zzz")).toEqual([]);
   });
@@ -90,26 +90,26 @@ describe("sortApps", () => {
   ];
   const ids = (list: InstalledApp[]) => list.map((a) => a.id);
 
-  it("ordina per nome e per editore", () => {
+  it("sorts by name and by publisher", () => {
     expect(ids(sortApps(apps, "name", 1, {}, {}))).toEqual(["a", "b", "c"]);
     expect(ids(sortApps(apps, "name", -1, {}, {}))).toEqual(["c", "b", "a"]);
-    // Senza editore passa prima; a parità decide il nome.
+    // No publisher comes first; on a tie the name decides.
     expect(ids(sortApps(apps, "publisher", 1, {}, {}))).toEqual(["c", "a", "b"]);
   });
 
-  it("per dimensione usa la base indicata, non le misure correnti", () => {
+  it("by size uses the given basis, not the current measurements", () => {
     const basis = { a: 10, b: 30, c: 20 };
-    const live = { a: measured("a", 999), b: measured("b", 1) }; // misure arrivate dopo
+    const live = { a: measured("a", 999), b: measured("b", 1) }; // measurements that arrived later
     expect(ids(sortApps(apps, "size", -1, basis, live))).toEqual(["b", "c", "a"]);
     expect(ids(sortApps(apps, "size", 1, basis, live))).toEqual(["a", "c", "b"]);
   });
 
-  it("per spazio su disco usa le misure, con le app non misurate in fondo", () => {
+  it("by disk space uses the measurements, with unmeasured apps last", () => {
     const sizes = { a: measured("a", 1, 50), b: measured("b", 1, 80) };
     expect(ids(sortApps(apps, "disk", -1, {}, sizes))).toEqual(["b", "a", "c"]);
   });
 
-  it("non modifica l'elenco originale", () => {
+  it("does not modify the original list", () => {
     const copy = [...apps];
     sortApps(apps, "name", -1, {}, {});
     expect(apps).toEqual(copy);
@@ -117,19 +117,19 @@ describe("sortApps", () => {
 });
 
 describe("totals", () => {
-  it("somma le cartelle misurate, contando una volta sola quelle condivise", () => {
-    const apps = [app("word"), app("excel"), app("git"), app("sconosciuta")];
+  it("sums the measured folders, counting shared ones only once", () => {
+    const apps = [app("word"), app("excel"), app("git"), app("unknown")];
     const office = "C:\\Program Files\\Microsoft Office";
     const sizes = {
       word: measured("word", 100, 120, office),
       excel: measured("excel", 100, 120, office.toUpperCase()),
       git: measured("git", 50, 60),
-      sconosciuta: { ...measured("sconosciuta", 0), status: "missing" as const },
+      unknown: { ...measured("unknown", 0), status: "missing" as const },
     };
     expect(totals(apps, sizes)).toEqual({ measuredApps: 3, size: 150, disk: 180 });
   });
 
-  it("senza misure i totali sono zero", () => {
+  it("with no measurements the totals are zero", () => {
     expect(totals([app("a")], {})).toEqual({ measuredApps: 0, size: 0, disk: 0 });
   });
 });

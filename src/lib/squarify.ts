@@ -11,7 +11,7 @@ export interface TmRect<T> {
   h: number;
 }
 
-/** Layout treemap "squarified" (Bruls et al.). Gli elementi vanno passati in ordine decrescente. */
+/** "Squarified" treemap layout (Bruls et al.). Items must be passed in descending order. */
 export function squarify<T>(
   items: TmInput<T>[],
   x: number,

@@ -2,6 +2,6 @@
 import type { Node } from "./Node";
 
 /**
- * Figli di un nodo, dal più grande al più piccolo.
+ * Children of a node, from largest to smallest.
  */
 export type ChildrenOf = { parentId: number, children: Array<Node>, };

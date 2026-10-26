@@ -19,14 +19,14 @@ use crate::state::{AppsState, ScanRegistry};
 use crate::sys;
 use crate::tree::ScanTree;
 
-/// Massimo numero di figli restituiti per nodo (i più grandi).
+/// Maximum number of children returned per node (the largest ones).
 const MAX_CHILDREN: usize = 5000;
-/// Massimo di nodi richiesti in un'unica chiamata a `get_children`.
+/// Maximum number of nodes requested in a single `get_children` call.
 const MAX_BATCH: usize = 200;
 
 fn emit<T: serde::Serialize + Clone>(app: &AppHandle, event: &str, payload: T) {
     if let Err(e) = app.emit(event, payload) {
-        warn!(event, error = %e, "emissione evento non riuscita");
+        warn!(event, error = %e, "failed to emit event");
     }
 }
 
@@ -47,7 +47,7 @@ fn failed(
     }
 }
 
-/// Se `root` è l'intera unità, quanti byte sono occupati: serve a stimare l'avanzamento.
+/// If `root` is a whole drive, how many bytes are used: needed to estimate progress.
 fn expected_bytes(root: &Path) -> Option<u64> {
     let s = root.to_str()?;
     if s.len() != 3 || !s.ends_with(":\\") {
@@ -84,8 +84,8 @@ fn run_scan(
                 bytes: snap.bytes,
                 current_path: snap.current.clone(),
                 elapsed_ms: elapsed(),
-                // Il conteggio non arriva mai al 100% prima della fine: i file di sistema
-                // e quelli non accessibili non rientrano nel totale.
+                // The count never reaches 100% before the end: system files
+                // and inaccessible ones are not part of the total.
                 fraction: expected.map(|e| (snap.bytes as f64 / e as f64).min(0.99)),
             },
         );
@@ -94,7 +94,7 @@ fn run_scan(
     match result {
         Ok(Outcome::Completed { tree, totals }) => {
             let tree = Arc::new(tree);
-            let root_node = tree.get(tree.root_id()).expect("la radice esiste sempre");
+            let root_node = tree.get(tree.root_id()).expect("the root always exists");
             info!(
                 scan_id,
                 files = totals.files,
@@ -103,7 +103,7 @@ fn run_scan(
                 denied = totals.denied,
                 nodes = tree.len(),
                 elapsed_ms = elapsed(),
-                "scansione completata"
+                "scan completed"
             );
             registry.store_result(scan_id, tree);
             emit(
@@ -121,7 +121,7 @@ fn run_scan(
             );
         }
         Ok(Outcome::Cancelled(t)) => {
-            info!(scan_id, files = t.files, "scansione annullata");
+            info!(scan_id, files = t.files, "scan cancelled");
             emit(
                 app,
                 EVENT_FAILED,
@@ -129,25 +129,22 @@ fn run_scan(
                     scan_id,
                     ScanFailureKind::Cancelled,
                     root,
-                    "Scansione annullata".into(),
+                    "Scan cancelled".into(),
                     &t,
                 ),
             );
         }
         Err(e) => {
             let (kind, message) = match &e {
-                ScanError::NotFound => (
-                    ScanFailureKind::NotFound,
-                    "Percorso non trovato".to_string(),
-                ),
+                ScanError::NotFound => (ScanFailureKind::NotFound, "Path not found".to_string()),
                 ScanError::NotADirectory => (
                     ScanFailureKind::NotADirectory,
-                    "Il percorso non è una cartella".to_string(),
+                    "The path is not a folder".to_string(),
                 ),
-                ScanError::Denied => (ScanFailureKind::Denied, "Accesso negato".to_string()),
+                ScanError::Denied => (ScanFailureKind::Denied, "Access denied".to_string()),
                 ScanError::Io(io) => (ScanFailureKind::Io, io.to_string()),
             };
-            warn!(scan_id, path = %root.display(), ?kind, %message, "scansione non riuscita");
+            warn!(scan_id, path = %root.display(), ?kind, %message, "scan failed");
             emit(
                 app,
                 EVENT_FAILED,
@@ -157,13 +154,13 @@ fn run_scan(
     }
 }
 
-/// Avvia una scansione in un thread dedicato. Avanzamento ed esito arrivano come eventi
-/// (`scan:progress`, `scan:done`, `scan:failed`) che riportano `scan_id`.
+/// Starts a scan on a dedicated thread. Progress and outcome arrive as events
+/// (`scan:progress`, `scan:done`, `scan:failed`) that carry `scan_id`.
 #[tauri::command]
 pub fn start_scan(app: AppHandle, registry: State<'_, ScanRegistry>, scan_id: u64, path: String) {
     let cancel = registry.begin(scan_id);
     let root = PathBuf::from(path);
-    info!(scan_id, path = %root.display(), "scansione avviata");
+    info!(scan_id, path = %root.display(), "scan started");
 
     let spawned = std::thread::Builder::new()
         .name(format!("scan-{scan_id}"))
@@ -177,7 +174,7 @@ pub fn start_scan(app: AppHandle, registry: State<'_, ScanRegistry>, scan_id: u6
         });
 
     if let Err(e) = spawned {
-        warn!(scan_id, error = %e, "impossibile avviare il thread di scansione");
+        warn!(scan_id, error = %e, "unable to start the scan thread");
         registry.finish(scan_id);
         emit(
             &app,
@@ -194,7 +191,7 @@ pub fn start_scan(app: AppHandle, registry: State<'_, ScanRegistry>, scan_id: u6
     }
 }
 
-/// Chiede l'annullamento di una scansione; l'esito arriva come evento `scan:failed`.
+/// Requests cancellation of a scan; the outcome arrives as a `scan:failed` event.
 #[tauri::command]
 pub fn cancel_scan(registry: State<'_, ScanRegistry>, scan_id: u64) -> bool {
     registry.cancel(scan_id)
@@ -208,10 +205,10 @@ pub fn list_drives() -> Vec<Drive> {
 fn tree_of(registry: &ScanRegistry, scan_id: u64) -> Result<Arc<ScanTree>, String> {
     registry
         .result(scan_id)
-        .ok_or_else(|| "Risultati della scansione non disponibili".to_string())
+        .ok_or_else(|| "Scan results not available".to_string())
 }
 
-/// Figli di più nodi in un'unica chiamata, ciascuno dal più grande.
+/// Children of several nodes in a single call, each from largest to smallest.
 #[tauri::command]
 pub fn get_children(
     registry: State<'_, ScanRegistry>,
@@ -248,7 +245,7 @@ pub fn get_type_stats(
     Ok(tree_of(&registry, scan_id)?.type_stats(ext_limit.min(1000)))
 }
 
-/// Catena di antenati dalla radice al nodo (incluso).
+/// Chain of ancestors from the root to the node (included).
 #[tauri::command]
 pub fn get_ancestors(
     registry: State<'_, ScanRegistry>,
@@ -267,35 +264,35 @@ pub fn get_denied(
     Ok(tree_of(&registry, scan_id)?.denied(limit.min(1000)))
 }
 
-/// Mostra un file (selezionato) o una cartella (aperta) in Esplora risorse.
+/// Shows a file (selected) or a folder (opened) in File Explorer.
 #[tauri::command]
 pub fn open_in_explorer(path: String) -> Result<(), String> {
     let target = Path::new(&path);
     if !target.exists() {
-        return Err("Percorso non trovato".into());
+        return Err("Path not found".into());
     }
     let mut cmd = Command::new("explorer.exe");
     if target.is_dir() {
         cmd.arg(target);
     } else {
-        // Esplora risorse vuole `/select,"percorso"` come un'unica stringa già quotata.
+        // File Explorer wants `/select,"path"` as a single, already quoted string.
         cmd.raw_arg(format!("/select,\"{path}\""));
     }
     cmd.spawn().map(|_| ()).map_err(|e| e.to_string())
 }
 
-/// App desktop installate, lette dal registro di Windows.
+/// Installed desktop apps, read from the Windows registry.
 #[tauri::command]
 pub fn list_installed_apps(state: State<'_, AppsState>) -> Vec<InstalledApp> {
     let list = apps::list();
-    info!(count = list.len(), "app installate lette dal registro");
+    info!(count = list.len(), "installed apps read from the registry");
     state.set_apps(list.clone());
     list
 }
 
-/// Misura in un thread dedicato le cartelle delle app indicate (tutte, se `ids` è vuoto).
-/// Ogni risultato arriva come evento `apps:size`; alla fine `apps:done`. Avviare una nuova
-/// misurazione annulla quella in corso, senza toccare le scansioni dei dischi.
+/// Measures the folders of the given apps on a dedicated thread (all of them if `ids` is empty).
+/// Each result arrives as an `apps:size` event; at the end, `apps:done`. Starting a new
+/// measurement cancels the one in progress, without touching disk scans.
 #[tauri::command]
 pub fn measure_app_sizes(app: AppHandle, state: State<'_, AppsState>, ids: Vec<String>) {
     let cancel = state.begin_measure();
@@ -304,15 +301,15 @@ pub fn measure_app_sizes(app: AppHandle, state: State<'_, AppsState>, ids: Vec<S
         .into_iter()
         .filter(|a| a.install_location.is_some() && (ids.is_empty() || ids.contains(&a.id)))
         .collect();
-    // Le più grandi (secondo il registro) per prime: i risultati più rilevanti arrivano subito.
+    // Largest first (per the registry): the most relevant results arrive right away.
     targets.sort_by_key(|a| std::cmp::Reverse(a.estimated_size.unwrap_or(0)));
-    info!(apps = targets.len(), "misura delle app avviata");
+    info!(apps = targets.len(), "app measurement started");
 
     let spawned = std::thread::Builder::new().name("apps-size".into()).spawn({
         let app = app.clone();
         let cancel = cancel.clone();
         move || {
-            // App con la stessa cartella (es. Office): si misura una volta sola.
+            // Apps sharing a folder (e.g. Office): measured only once.
             let mut by_path: Vec<(String, Vec<&InstalledApp>)> = Vec::new();
             for a in &targets {
                 let key = a
@@ -346,7 +343,7 @@ pub fn measure_app_sizes(app: AppHandle, state: State<'_, AppsState>, ids: Vec<S
                     measured += 1;
                 }
             }
-            info!(measured, cancelled, "misura delle app terminata");
+            info!(measured, cancelled, "app measurement finished");
             emit(
                 &app,
                 EVENT_APPS_DONE,
@@ -360,7 +357,7 @@ pub fn measure_app_sizes(app: AppHandle, state: State<'_, AppsState>, ids: Vec<S
         }
     });
     if let Err(e) = spawned {
-        warn!(error = %e, "impossibile avviare il thread di misura delle app");
+        warn!(error = %e, "unable to start the app measurement thread");
         state.finish_measure(&cancel);
         emit(
             &app,
